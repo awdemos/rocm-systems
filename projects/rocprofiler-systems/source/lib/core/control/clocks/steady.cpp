@@ -27,7 +27,7 @@ steady::sleep_until(clock_time_point deadline)
 }
 
 void
-steady::interrupt()
+steady::interrupt() noexcept
 {
     auto _thread_state_guard = state::thread::scoped(state::thread::Internal);
     {
@@ -35,5 +35,12 @@ steady::interrupt()
         m_interrupted = true;
     }
     m_cv.notify_all();
+}
+
+void
+steady::reset() noexcept
+{
+    const std::scoped_lock lk{ m_mutex };
+    m_interrupted = false;
 }
 }  // namespace rocprofsys::control::clocks
