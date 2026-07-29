@@ -36,7 +36,6 @@ try:
         )
 
     from .libpyrocprofsys import coverage
-    from . import user
     from .profiler import Profiler, FakeProfiler
     from .libpyrocprofsys.profiler import (
         profiler_function,
@@ -68,7 +67,6 @@ try:
         "profile",
         "noprofile",
         "coverage",
-        "user",
     ]
 
     import atexit
