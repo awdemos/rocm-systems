@@ -13,10 +13,7 @@ namespace rocjitsu {
 namespace rdna4 {
 
 VCmpLtF16Vopc::VCmpLtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_f16_dpp"
-               : "v_cmp_lt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -35,7 +32,7 @@ VCmpLtF16Vopc::VCmpLtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -43,7 +40,7 @@ VCmpLtF16Vopc::VCmpLtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -54,10 +51,7 @@ VCmpLtF16Vopc::VCmpLtF16Vopc(const MachineInst *inst)
 }
 
 VCmpEqF16Vopc::VCmpEqF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_f16_dpp"
-               : "v_cmp_eq_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -76,7 +70,7 @@ VCmpEqF16Vopc::VCmpEqF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -84,7 +78,7 @@ VCmpEqF16Vopc::VCmpEqF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -95,10 +89,7 @@ VCmpEqF16Vopc::VCmpEqF16Vopc(const MachineInst *inst)
 }
 
 VCmpLeF16Vopc::VCmpLeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_f16_dpp"
-               : "v_cmp_le_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -117,7 +108,7 @@ VCmpLeF16Vopc::VCmpLeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -125,7 +116,7 @@ VCmpLeF16Vopc::VCmpLeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -136,10 +127,7 @@ VCmpLeF16Vopc::VCmpLeF16Vopc(const MachineInst *inst)
 }
 
 VCmpGtF16Vopc::VCmpGtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_f16_dpp"
-               : "v_cmp_gt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -158,7 +146,7 @@ VCmpGtF16Vopc::VCmpGtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -166,7 +154,7 @@ VCmpGtF16Vopc::VCmpGtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -177,10 +165,7 @@ VCmpGtF16Vopc::VCmpGtF16Vopc(const MachineInst *inst)
 }
 
 VCmpLgF16Vopc::VCmpLgF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lg_f16_dpp"
-               : "v_cmp_lg_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lg_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLgF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -199,7 +184,7 @@ VCmpLgF16Vopc::VCmpLgF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -207,7 +192,7 @@ VCmpLgF16Vopc::VCmpLgF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -218,10 +203,7 @@ VCmpLgF16Vopc::VCmpLgF16Vopc(const MachineInst *inst)
 }
 
 VCmpGeF16Vopc::VCmpGeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_f16_dpp"
-               : "v_cmp_ge_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -240,7 +222,7 @@ VCmpGeF16Vopc::VCmpGeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -248,7 +230,7 @@ VCmpGeF16Vopc::VCmpGeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -259,10 +241,7 @@ VCmpGeF16Vopc::VCmpGeF16Vopc(const MachineInst *inst)
 }
 
 VCmpOF16Vopc::VCmpOF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_o_f16_dpp"
-               : "v_cmp_o_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_o_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpOF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -281,7 +260,7 @@ VCmpOF16Vopc::VCmpOF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -289,7 +268,7 @@ VCmpOF16Vopc::VCmpOF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -300,10 +279,7 @@ VCmpOF16Vopc::VCmpOF16Vopc(const MachineInst *inst)
 }
 
 VCmpUF16Vopc::VCmpUF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_u_f16_dpp"
-               : "v_cmp_u_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_u_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpUF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -322,7 +298,7 @@ VCmpUF16Vopc::VCmpUF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -330,7 +306,7 @@ VCmpUF16Vopc::VCmpUF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -341,10 +317,7 @@ VCmpUF16Vopc::VCmpUF16Vopc(const MachineInst *inst)
 }
 
 VCmpNgeF16Vopc::VCmpNgeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nge_f16_dpp"
-               : "v_cmp_nge_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nge_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgeF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -363,7 +336,7 @@ VCmpNgeF16Vopc::VCmpNgeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -371,7 +344,7 @@ VCmpNgeF16Vopc::VCmpNgeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -382,10 +355,7 @@ VCmpNgeF16Vopc::VCmpNgeF16Vopc(const MachineInst *inst)
 }
 
 VCmpNlgF16Vopc::VCmpNlgF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlg_f16_dpp"
-               : "v_cmp_nlg_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlg_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNlgF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -404,7 +374,7 @@ VCmpNlgF16Vopc::VCmpNlgF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -412,7 +382,7 @@ VCmpNlgF16Vopc::VCmpNlgF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -423,10 +393,7 @@ VCmpNlgF16Vopc::VCmpNlgF16Vopc(const MachineInst *inst)
 }
 
 VCmpNgtF16Vopc::VCmpNgtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ngt_f16_dpp"
-               : "v_cmp_ngt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ngt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgtF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -445,7 +412,7 @@ VCmpNgtF16Vopc::VCmpNgtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -453,7 +420,7 @@ VCmpNgtF16Vopc::VCmpNgtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -464,10 +431,7 @@ VCmpNgtF16Vopc::VCmpNgtF16Vopc(const MachineInst *inst)
 }
 
 VCmpNleF16Vopc::VCmpNleF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nle_f16_dpp"
-               : "v_cmp_nle_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nle_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNleF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -486,7 +450,7 @@ VCmpNleF16Vopc::VCmpNleF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -494,7 +458,7 @@ VCmpNleF16Vopc::VCmpNleF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -505,10 +469,7 @@ VCmpNleF16Vopc::VCmpNleF16Vopc(const MachineInst *inst)
 }
 
 VCmpNeqF16Vopc::VCmpNeqF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_neq_f16_dpp"
-               : "v_cmp_neq_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_neq_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeqF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -527,7 +488,7 @@ VCmpNeqF16Vopc::VCmpNeqF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -535,7 +496,7 @@ VCmpNeqF16Vopc::VCmpNeqF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -546,10 +507,7 @@ VCmpNeqF16Vopc::VCmpNeqF16Vopc(const MachineInst *inst)
 }
 
 VCmpNltF16Vopc::VCmpNltF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlt_f16_dpp"
-               : "v_cmp_nlt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNltF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -568,7 +526,7 @@ VCmpNltF16Vopc::VCmpNltF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -576,7 +534,7 @@ VCmpNltF16Vopc::VCmpNltF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -587,10 +545,7 @@ VCmpNltF16Vopc::VCmpNltF16Vopc(const MachineInst *inst)
 }
 
 VCmpLtF32Vopc::VCmpLtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_f32_dpp"
-               : "v_cmp_lt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -625,10 +580,7 @@ VCmpLtF32Vopc::VCmpLtF32Vopc(const MachineInst *inst)
 }
 
 VCmpEqF32Vopc::VCmpEqF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_f32_dpp"
-               : "v_cmp_eq_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -663,10 +615,7 @@ VCmpEqF32Vopc::VCmpEqF32Vopc(const MachineInst *inst)
 }
 
 VCmpLeF32Vopc::VCmpLeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_f32_dpp"
-               : "v_cmp_le_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -701,10 +650,7 @@ VCmpLeF32Vopc::VCmpLeF32Vopc(const MachineInst *inst)
 }
 
 VCmpGtF32Vopc::VCmpGtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_f32_dpp"
-               : "v_cmp_gt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -739,10 +685,7 @@ VCmpGtF32Vopc::VCmpGtF32Vopc(const MachineInst *inst)
 }
 
 VCmpLgF32Vopc::VCmpLgF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lg_f32_dpp"
-               : "v_cmp_lg_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lg_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLgF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -777,10 +720,7 @@ VCmpLgF32Vopc::VCmpLgF32Vopc(const MachineInst *inst)
 }
 
 VCmpGeF32Vopc::VCmpGeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_f32_dpp"
-               : "v_cmp_ge_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -815,10 +755,7 @@ VCmpGeF32Vopc::VCmpGeF32Vopc(const MachineInst *inst)
 }
 
 VCmpOF32Vopc::VCmpOF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_o_f32_dpp"
-               : "v_cmp_o_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_o_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpOF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -853,10 +790,7 @@ VCmpOF32Vopc::VCmpOF32Vopc(const MachineInst *inst)
 }
 
 VCmpUF32Vopc::VCmpUF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_u_f32_dpp"
-               : "v_cmp_u_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_u_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpUF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -891,10 +825,7 @@ VCmpUF32Vopc::VCmpUF32Vopc(const MachineInst *inst)
 }
 
 VCmpNgeF32Vopc::VCmpNgeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nge_f32_dpp"
-               : "v_cmp_nge_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nge_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgeF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -929,10 +860,7 @@ VCmpNgeF32Vopc::VCmpNgeF32Vopc(const MachineInst *inst)
 }
 
 VCmpNlgF32Vopc::VCmpNlgF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlg_f32_dpp"
-               : "v_cmp_nlg_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlg_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNlgF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -967,10 +895,7 @@ VCmpNlgF32Vopc::VCmpNlgF32Vopc(const MachineInst *inst)
 }
 
 VCmpNgtF32Vopc::VCmpNgtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ngt_f32_dpp"
-               : "v_cmp_ngt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ngt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgtF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1005,10 +930,7 @@ VCmpNgtF32Vopc::VCmpNgtF32Vopc(const MachineInst *inst)
 }
 
 VCmpNleF32Vopc::VCmpNleF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nle_f32_dpp"
-               : "v_cmp_nle_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nle_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNleF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1043,10 +965,7 @@ VCmpNleF32Vopc::VCmpNleF32Vopc(const MachineInst *inst)
 }
 
 VCmpNeqF32Vopc::VCmpNeqF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_neq_f32_dpp"
-               : "v_cmp_neq_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_neq_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeqF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1081,10 +1000,7 @@ VCmpNeqF32Vopc::VCmpNeqF32Vopc(const MachineInst *inst)
 }
 
 VCmpNltF32Vopc::VCmpNltF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlt_f32_dpp"
-               : "v_cmp_nlt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNltF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1119,10 +1035,7 @@ VCmpNltF32Vopc::VCmpNltF32Vopc(const MachineInst *inst)
 }
 
 VCmpLtF64Vopc::VCmpLtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_f64_dpp"
-               : "v_cmp_lt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1144,10 +1057,7 @@ VCmpLtF64Vopc::VCmpLtF64Vopc(const MachineInst *inst)
 }
 
 VCmpEqF64Vopc::VCmpEqF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_f64_dpp"
-               : "v_cmp_eq_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1169,10 +1079,7 @@ VCmpEqF64Vopc::VCmpEqF64Vopc(const MachineInst *inst)
 }
 
 VCmpLeF64Vopc::VCmpLeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_f64_dpp"
-               : "v_cmp_le_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1194,10 +1101,7 @@ VCmpLeF64Vopc::VCmpLeF64Vopc(const MachineInst *inst)
 }
 
 VCmpGtF64Vopc::VCmpGtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_f64_dpp"
-               : "v_cmp_gt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1219,10 +1123,7 @@ VCmpGtF64Vopc::VCmpGtF64Vopc(const MachineInst *inst)
 }
 
 VCmpLgF64Vopc::VCmpLgF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lg_f64_dpp"
-               : "v_cmp_lg_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lg_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLgF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1244,10 +1145,7 @@ VCmpLgF64Vopc::VCmpLgF64Vopc(const MachineInst *inst)
 }
 
 VCmpGeF64Vopc::VCmpGeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_f64_dpp"
-               : "v_cmp_ge_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1269,10 +1167,7 @@ VCmpGeF64Vopc::VCmpGeF64Vopc(const MachineInst *inst)
 }
 
 VCmpOF64Vopc::VCmpOF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_o_f64_dpp"
-               : "v_cmp_o_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_o_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpOF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1294,10 +1189,7 @@ VCmpOF64Vopc::VCmpOF64Vopc(const MachineInst *inst)
 }
 
 VCmpUF64Vopc::VCmpUF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_u_f64_dpp"
-               : "v_cmp_u_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_u_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpUF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1319,10 +1211,7 @@ VCmpUF64Vopc::VCmpUF64Vopc(const MachineInst *inst)
 }
 
 VCmpNgeF64Vopc::VCmpNgeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nge_f64_dpp"
-               : "v_cmp_nge_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nge_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgeF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1344,10 +1233,7 @@ VCmpNgeF64Vopc::VCmpNgeF64Vopc(const MachineInst *inst)
 }
 
 VCmpNlgF64Vopc::VCmpNlgF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlg_f64_dpp"
-               : "v_cmp_nlg_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlg_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNlgF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1369,10 +1255,7 @@ VCmpNlgF64Vopc::VCmpNlgF64Vopc(const MachineInst *inst)
 }
 
 VCmpNgtF64Vopc::VCmpNgtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ngt_f64_dpp"
-               : "v_cmp_ngt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ngt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNgtF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1394,10 +1277,7 @@ VCmpNgtF64Vopc::VCmpNgtF64Vopc(const MachineInst *inst)
 }
 
 VCmpNleF64Vopc::VCmpNleF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nle_f64_dpp"
-               : "v_cmp_nle_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nle_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNleF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1419,10 +1299,7 @@ VCmpNleF64Vopc::VCmpNleF64Vopc(const MachineInst *inst)
 }
 
 VCmpNeqF64Vopc::VCmpNeqF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_neq_f64_dpp"
-               : "v_cmp_neq_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_neq_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeqF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1444,10 +1321,7 @@ VCmpNeqF64Vopc::VCmpNeqF64Vopc(const MachineInst *inst)
 }
 
 VCmpNltF64Vopc::VCmpNltF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_nlt_f64_dpp"
-               : "v_cmp_nlt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_nlt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNltF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1469,10 +1343,7 @@ VCmpNltF64Vopc::VCmpNltF64Vopc(const MachineInst *inst)
 }
 
 VCmpLtI16Vopc::VCmpLtI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_i16_dpp"
-               : "v_cmp_lt_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1491,7 +1362,7 @@ VCmpLtI16Vopc::VCmpLtI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1499,7 +1370,7 @@ VCmpLtI16Vopc::VCmpLtI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1510,10 +1381,7 @@ VCmpLtI16Vopc::VCmpLtI16Vopc(const MachineInst *inst)
 }
 
 VCmpEqI16Vopc::VCmpEqI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_i16_dpp"
-               : "v_cmp_eq_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1532,7 +1400,7 @@ VCmpEqI16Vopc::VCmpEqI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1540,7 +1408,7 @@ VCmpEqI16Vopc::VCmpEqI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1551,10 +1419,7 @@ VCmpEqI16Vopc::VCmpEqI16Vopc(const MachineInst *inst)
 }
 
 VCmpLeI16Vopc::VCmpLeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_i16_dpp"
-               : "v_cmp_le_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1573,7 +1438,7 @@ VCmpLeI16Vopc::VCmpLeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1581,7 +1446,7 @@ VCmpLeI16Vopc::VCmpLeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1592,10 +1457,7 @@ VCmpLeI16Vopc::VCmpLeI16Vopc(const MachineInst *inst)
 }
 
 VCmpGtI16Vopc::VCmpGtI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_i16_dpp"
-               : "v_cmp_gt_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1614,7 +1476,7 @@ VCmpGtI16Vopc::VCmpGtI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1622,7 +1484,7 @@ VCmpGtI16Vopc::VCmpGtI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1633,10 +1495,7 @@ VCmpGtI16Vopc::VCmpGtI16Vopc(const MachineInst *inst)
 }
 
 VCmpNeI16Vopc::VCmpNeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_i16_dpp"
-               : "v_cmp_ne_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1655,7 +1514,7 @@ VCmpNeI16Vopc::VCmpNeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1663,7 +1522,7 @@ VCmpNeI16Vopc::VCmpNeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1674,10 +1533,7 @@ VCmpNeI16Vopc::VCmpNeI16Vopc(const MachineInst *inst)
 }
 
 VCmpGeI16Vopc::VCmpGeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_i16_dpp"
-               : "v_cmp_ge_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeI16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1696,7 +1552,7 @@ VCmpGeI16Vopc::VCmpGeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1704,7 +1560,7 @@ VCmpGeI16Vopc::VCmpGeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1715,10 +1571,7 @@ VCmpGeI16Vopc::VCmpGeI16Vopc(const MachineInst *inst)
 }
 
 VCmpLtU16Vopc::VCmpLtU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_u16_dpp"
-               : "v_cmp_lt_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1737,7 +1590,7 @@ VCmpLtU16Vopc::VCmpLtU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1745,7 +1598,7 @@ VCmpLtU16Vopc::VCmpLtU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1756,10 +1609,7 @@ VCmpLtU16Vopc::VCmpLtU16Vopc(const MachineInst *inst)
 }
 
 VCmpEqU16Vopc::VCmpEqU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_u16_dpp"
-               : "v_cmp_eq_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1778,7 +1628,7 @@ VCmpEqU16Vopc::VCmpEqU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1786,7 +1636,7 @@ VCmpEqU16Vopc::VCmpEqU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1797,10 +1647,7 @@ VCmpEqU16Vopc::VCmpEqU16Vopc(const MachineInst *inst)
 }
 
 VCmpLeU16Vopc::VCmpLeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_u16_dpp"
-               : "v_cmp_le_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1819,7 +1666,7 @@ VCmpLeU16Vopc::VCmpLeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1827,7 +1674,7 @@ VCmpLeU16Vopc::VCmpLeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1838,10 +1685,7 @@ VCmpLeU16Vopc::VCmpLeU16Vopc(const MachineInst *inst)
 }
 
 VCmpGtU16Vopc::VCmpGtU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_u16_dpp"
-               : "v_cmp_gt_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1860,7 +1704,7 @@ VCmpGtU16Vopc::VCmpGtU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1868,7 +1712,7 @@ VCmpGtU16Vopc::VCmpGtU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1879,10 +1723,7 @@ VCmpGtU16Vopc::VCmpGtU16Vopc(const MachineInst *inst)
 }
 
 VCmpNeU16Vopc::VCmpNeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_u16_dpp"
-               : "v_cmp_ne_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1901,7 +1742,7 @@ VCmpNeU16Vopc::VCmpNeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1909,7 +1750,7 @@ VCmpNeU16Vopc::VCmpNeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1920,10 +1761,7 @@ VCmpNeU16Vopc::VCmpNeU16Vopc(const MachineInst *inst)
 }
 
 VCmpGeU16Vopc::VCmpGeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_u16_dpp"
-               : "v_cmp_ge_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeU16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -1942,7 +1780,7 @@ VCmpGeU16Vopc::VCmpGeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1950,7 +1788,7 @@ VCmpGeU16Vopc::VCmpGeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1961,10 +1799,7 @@ VCmpGeU16Vopc::VCmpGeU16Vopc(const MachineInst *inst)
 }
 
 VCmpLtI32Vopc::VCmpLtI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_i32_dpp"
-               : "v_cmp_lt_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1999,10 +1834,7 @@ VCmpLtI32Vopc::VCmpLtI32Vopc(const MachineInst *inst)
 }
 
 VCmpEqI32Vopc::VCmpEqI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_i32_dpp"
-               : "v_cmp_eq_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2037,10 +1869,7 @@ VCmpEqI32Vopc::VCmpEqI32Vopc(const MachineInst *inst)
 }
 
 VCmpLeI32Vopc::VCmpLeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_i32_dpp"
-               : "v_cmp_le_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2075,10 +1904,7 @@ VCmpLeI32Vopc::VCmpLeI32Vopc(const MachineInst *inst)
 }
 
 VCmpGtI32Vopc::VCmpGtI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_i32_dpp"
-               : "v_cmp_gt_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2113,10 +1939,7 @@ VCmpGtI32Vopc::VCmpGtI32Vopc(const MachineInst *inst)
 }
 
 VCmpNeI32Vopc::VCmpNeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_i32_dpp"
-               : "v_cmp_ne_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2151,10 +1974,7 @@ VCmpNeI32Vopc::VCmpNeI32Vopc(const MachineInst *inst)
 }
 
 VCmpGeI32Vopc::VCmpGeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_i32_dpp"
-               : "v_cmp_ge_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeI32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2189,10 +2009,7 @@ VCmpGeI32Vopc::VCmpGeI32Vopc(const MachineInst *inst)
 }
 
 VCmpLtU32Vopc::VCmpLtU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_u32_dpp"
-               : "v_cmp_lt_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2227,10 +2044,7 @@ VCmpLtU32Vopc::VCmpLtU32Vopc(const MachineInst *inst)
 }
 
 VCmpEqU32Vopc::VCmpEqU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_u32_dpp"
-               : "v_cmp_eq_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2265,10 +2079,7 @@ VCmpEqU32Vopc::VCmpEqU32Vopc(const MachineInst *inst)
 }
 
 VCmpLeU32Vopc::VCmpLeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_u32_dpp"
-               : "v_cmp_le_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2303,10 +2114,7 @@ VCmpLeU32Vopc::VCmpLeU32Vopc(const MachineInst *inst)
 }
 
 VCmpGtU32Vopc::VCmpGtU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_u32_dpp"
-               : "v_cmp_gt_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2341,10 +2149,7 @@ VCmpGtU32Vopc::VCmpGtU32Vopc(const MachineInst *inst)
 }
 
 VCmpNeU32Vopc::VCmpNeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_u32_dpp"
-               : "v_cmp_ne_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2379,10 +2184,7 @@ VCmpNeU32Vopc::VCmpNeU32Vopc(const MachineInst *inst)
 }
 
 VCmpGeU32Vopc::VCmpGeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_u32_dpp"
-               : "v_cmp_ge_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeU32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2417,10 +2219,7 @@ VCmpGeU32Vopc::VCmpGeU32Vopc(const MachineInst *inst)
 }
 
 VCmpLtI64Vopc::VCmpLtI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_i64_dpp"
-               : "v_cmp_lt_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2442,10 +2241,7 @@ VCmpLtI64Vopc::VCmpLtI64Vopc(const MachineInst *inst)
 }
 
 VCmpEqI64Vopc::VCmpEqI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_i64_dpp"
-               : "v_cmp_eq_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2467,10 +2263,7 @@ VCmpEqI64Vopc::VCmpEqI64Vopc(const MachineInst *inst)
 }
 
 VCmpLeI64Vopc::VCmpLeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_i64_dpp"
-               : "v_cmp_le_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2492,10 +2285,7 @@ VCmpLeI64Vopc::VCmpLeI64Vopc(const MachineInst *inst)
 }
 
 VCmpGtI64Vopc::VCmpGtI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_i64_dpp"
-               : "v_cmp_gt_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2517,10 +2307,7 @@ VCmpGtI64Vopc::VCmpGtI64Vopc(const MachineInst *inst)
 }
 
 VCmpNeI64Vopc::VCmpNeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_i64_dpp"
-               : "v_cmp_ne_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2542,10 +2329,7 @@ VCmpNeI64Vopc::VCmpNeI64Vopc(const MachineInst *inst)
 }
 
 VCmpGeI64Vopc::VCmpGeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_i64_dpp"
-               : "v_cmp_ge_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeI64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2567,10 +2351,7 @@ VCmpGeI64Vopc::VCmpGeI64Vopc(const MachineInst *inst)
 }
 
 VCmpLtU64Vopc::VCmpLtU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_lt_u64_dpp"
-               : "v_cmp_lt_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_lt_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLtU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2592,10 +2373,7 @@ VCmpLtU64Vopc::VCmpLtU64Vopc(const MachineInst *inst)
 }
 
 VCmpEqU64Vopc::VCmpEqU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_eq_u64_dpp"
-               : "v_cmp_eq_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_eq_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpEqU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2617,10 +2395,7 @@ VCmpEqU64Vopc::VCmpEqU64Vopc(const MachineInst *inst)
 }
 
 VCmpLeU64Vopc::VCmpLeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_le_u64_dpp"
-               : "v_cmp_le_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_le_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpLeU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2642,10 +2417,7 @@ VCmpLeU64Vopc::VCmpLeU64Vopc(const MachineInst *inst)
 }
 
 VCmpGtU64Vopc::VCmpGtU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_gt_u64_dpp"
-               : "v_cmp_gt_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_gt_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGtU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2667,10 +2439,7 @@ VCmpGtU64Vopc::VCmpGtU64Vopc(const MachineInst *inst)
 }
 
 VCmpNeU64Vopc::VCmpNeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ne_u64_dpp"
-               : "v_cmp_ne_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ne_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpNeU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2692,10 +2461,7 @@ VCmpNeU64Vopc::VCmpNeU64Vopc(const MachineInst *inst)
 }
 
 VCmpGeU64Vopc::VCmpGeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_ge_u64_dpp"
-               : "v_cmp_ge_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_ge_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpGeU64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2717,10 +2483,7 @@ VCmpGeU64Vopc::VCmpGeU64Vopc(const MachineInst *inst)
 }
 
 VCmpClassF16Vopc::VCmpClassF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_class_f16_dpp"
-               : "v_cmp_class_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_class_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpClassF16Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(16, OperandType::OPR_SRC,
@@ -2739,7 +2502,7 @@ VCmpClassF16Vopc::VCmpClassF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -2747,7 +2510,7 @@ VCmpClassF16Vopc::VCmpClassF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -2758,10 +2521,7 @@ VCmpClassF16Vopc::VCmpClassF16Vopc(const MachineInst *inst)
 }
 
 VCmpClassF32Vopc::VCmpClassF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_class_f32_dpp"
-               : "v_cmp_class_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_class_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpClassF32Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2796,10 +2556,7 @@ VCmpClassF32Vopc::VCmpClassF32Vopc(const MachineInst *inst)
 }
 
 VCmpClassF64Vopc::VCmpClassF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmp_class_f64_dpp"
-               : "v_cmp_class_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmp_class_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpClassF64Vopc)),
       vcc(64, OperandType::OPR_VCC, 106),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -2821,10 +2578,7 @@ VCmpClassF64Vopc::VCmpClassF64Vopc(const MachineInst *inst)
 }
 
 VCmpxLtF16Vopc::VCmpxLtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_f16_dpp"
-               : "v_cmpx_lt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -2845,7 +2599,7 @@ VCmpxLtF16Vopc::VCmpxLtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -2853,7 +2607,7 @@ VCmpxLtF16Vopc::VCmpxLtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -2866,10 +2620,7 @@ VCmpxLtF16Vopc::VCmpxLtF16Vopc(const MachineInst *inst)
 }
 
 VCmpxEqF16Vopc::VCmpxEqF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_f16_dpp"
-               : "v_cmpx_eq_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -2890,7 +2641,7 @@ VCmpxEqF16Vopc::VCmpxEqF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -2898,7 +2649,7 @@ VCmpxEqF16Vopc::VCmpxEqF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -2911,10 +2662,7 @@ VCmpxEqF16Vopc::VCmpxEqF16Vopc(const MachineInst *inst)
 }
 
 VCmpxLeF16Vopc::VCmpxLeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_f16_dpp"
-               : "v_cmpx_le_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -2935,7 +2683,7 @@ VCmpxLeF16Vopc::VCmpxLeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -2943,7 +2691,7 @@ VCmpxLeF16Vopc::VCmpxLeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -2956,10 +2704,7 @@ VCmpxLeF16Vopc::VCmpxLeF16Vopc(const MachineInst *inst)
 }
 
 VCmpxGtF16Vopc::VCmpxGtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_f16_dpp"
-               : "v_cmpx_gt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -2980,7 +2725,7 @@ VCmpxGtF16Vopc::VCmpxGtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -2988,7 +2733,7 @@ VCmpxGtF16Vopc::VCmpxGtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3001,10 +2746,7 @@ VCmpxGtF16Vopc::VCmpxGtF16Vopc(const MachineInst *inst)
 }
 
 VCmpxLgF16Vopc::VCmpxLgF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lg_f16_dpp"
-               : "v_cmpx_lg_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lg_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLgF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3025,7 +2767,7 @@ VCmpxLgF16Vopc::VCmpxLgF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3033,7 +2775,7 @@ VCmpxLgF16Vopc::VCmpxLgF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3046,10 +2788,7 @@ VCmpxLgF16Vopc::VCmpxLgF16Vopc(const MachineInst *inst)
 }
 
 VCmpxGeF16Vopc::VCmpxGeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_f16_dpp"
-               : "v_cmpx_ge_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3070,7 +2809,7 @@ VCmpxGeF16Vopc::VCmpxGeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3078,7 +2817,7 @@ VCmpxGeF16Vopc::VCmpxGeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3091,10 +2830,7 @@ VCmpxGeF16Vopc::VCmpxGeF16Vopc(const MachineInst *inst)
 }
 
 VCmpxOF16Vopc::VCmpxOF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_o_f16_dpp"
-               : "v_cmpx_o_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_o_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxOF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3115,7 +2851,7 @@ VCmpxOF16Vopc::VCmpxOF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3123,7 +2859,7 @@ VCmpxOF16Vopc::VCmpxOF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3136,10 +2872,7 @@ VCmpxOF16Vopc::VCmpxOF16Vopc(const MachineInst *inst)
 }
 
 VCmpxUF16Vopc::VCmpxUF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_u_f16_dpp"
-               : "v_cmpx_u_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_u_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxUF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3160,7 +2893,7 @@ VCmpxUF16Vopc::VCmpxUF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3168,7 +2901,7 @@ VCmpxUF16Vopc::VCmpxUF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3181,10 +2914,7 @@ VCmpxUF16Vopc::VCmpxUF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNgeF16Vopc::VCmpxNgeF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nge_f16_dpp"
-               : "v_cmpx_nge_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nge_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgeF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3205,7 +2935,7 @@ VCmpxNgeF16Vopc::VCmpxNgeF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3213,7 +2943,7 @@ VCmpxNgeF16Vopc::VCmpxNgeF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3226,10 +2956,7 @@ VCmpxNgeF16Vopc::VCmpxNgeF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNlgF16Vopc::VCmpxNlgF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlg_f16_dpp"
-               : "v_cmpx_nlg_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlg_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNlgF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3250,7 +2977,7 @@ VCmpxNlgF16Vopc::VCmpxNlgF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3258,7 +2985,7 @@ VCmpxNlgF16Vopc::VCmpxNlgF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3271,10 +2998,7 @@ VCmpxNlgF16Vopc::VCmpxNlgF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNgtF16Vopc::VCmpxNgtF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ngt_f16_dpp"
-               : "v_cmpx_ngt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ngt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgtF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3295,7 +3019,7 @@ VCmpxNgtF16Vopc::VCmpxNgtF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3303,7 +3027,7 @@ VCmpxNgtF16Vopc::VCmpxNgtF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3316,10 +3040,7 @@ VCmpxNgtF16Vopc::VCmpxNgtF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNleF16Vopc::VCmpxNleF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nle_f16_dpp"
-               : "v_cmpx_nle_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nle_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNleF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3340,7 +3061,7 @@ VCmpxNleF16Vopc::VCmpxNleF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3348,7 +3069,7 @@ VCmpxNleF16Vopc::VCmpxNleF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3361,10 +3082,7 @@ VCmpxNleF16Vopc::VCmpxNleF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNeqF16Vopc::VCmpxNeqF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_neq_f16_dpp"
-               : "v_cmpx_neq_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_neq_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeqF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3385,7 +3103,7 @@ VCmpxNeqF16Vopc::VCmpxNeqF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3393,7 +3111,7 @@ VCmpxNeqF16Vopc::VCmpxNeqF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3406,10 +3124,7 @@ VCmpxNeqF16Vopc::VCmpxNeqF16Vopc(const MachineInst *inst)
 }
 
 VCmpxNltF16Vopc::VCmpxNltF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlt_f16_dpp"
-               : "v_cmpx_nlt_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlt_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNltF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -3430,7 +3145,7 @@ VCmpxNltF16Vopc::VCmpxNltF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -3438,7 +3153,7 @@ VCmpxNltF16Vopc::VCmpxNltF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -3451,10 +3166,7 @@ VCmpxNltF16Vopc::VCmpxNltF16Vopc(const MachineInst *inst)
 }
 
 VCmpxLtF32Vopc::VCmpxLtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_f32_dpp"
-               : "v_cmpx_lt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3493,10 +3205,7 @@ VCmpxLtF32Vopc::VCmpxLtF32Vopc(const MachineInst *inst)
 }
 
 VCmpxEqF32Vopc::VCmpxEqF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_f32_dpp"
-               : "v_cmpx_eq_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3535,10 +3244,7 @@ VCmpxEqF32Vopc::VCmpxEqF32Vopc(const MachineInst *inst)
 }
 
 VCmpxLeF32Vopc::VCmpxLeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_f32_dpp"
-               : "v_cmpx_le_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3577,10 +3283,7 @@ VCmpxLeF32Vopc::VCmpxLeF32Vopc(const MachineInst *inst)
 }
 
 VCmpxGtF32Vopc::VCmpxGtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_f32_dpp"
-               : "v_cmpx_gt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3619,10 +3322,7 @@ VCmpxGtF32Vopc::VCmpxGtF32Vopc(const MachineInst *inst)
 }
 
 VCmpxLgF32Vopc::VCmpxLgF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lg_f32_dpp"
-               : "v_cmpx_lg_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lg_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLgF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3661,10 +3361,7 @@ VCmpxLgF32Vopc::VCmpxLgF32Vopc(const MachineInst *inst)
 }
 
 VCmpxGeF32Vopc::VCmpxGeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_f32_dpp"
-               : "v_cmpx_ge_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3703,10 +3400,7 @@ VCmpxGeF32Vopc::VCmpxGeF32Vopc(const MachineInst *inst)
 }
 
 VCmpxOF32Vopc::VCmpxOF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_o_f32_dpp"
-               : "v_cmpx_o_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_o_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxOF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3745,10 +3439,7 @@ VCmpxOF32Vopc::VCmpxOF32Vopc(const MachineInst *inst)
 }
 
 VCmpxUF32Vopc::VCmpxUF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_u_f32_dpp"
-               : "v_cmpx_u_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_u_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxUF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3787,10 +3478,7 @@ VCmpxUF32Vopc::VCmpxUF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNgeF32Vopc::VCmpxNgeF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nge_f32_dpp"
-               : "v_cmpx_nge_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nge_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgeF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3829,10 +3517,7 @@ VCmpxNgeF32Vopc::VCmpxNgeF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNlgF32Vopc::VCmpxNlgF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlg_f32_dpp"
-               : "v_cmpx_nlg_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlg_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNlgF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3871,10 +3556,7 @@ VCmpxNlgF32Vopc::VCmpxNlgF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNgtF32Vopc::VCmpxNgtF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ngt_f32_dpp"
-               : "v_cmpx_ngt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ngt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgtF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3913,10 +3595,7 @@ VCmpxNgtF32Vopc::VCmpxNgtF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNleF32Vopc::VCmpxNleF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nle_f32_dpp"
-               : "v_cmpx_nle_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nle_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNleF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3955,10 +3634,7 @@ VCmpxNleF32Vopc::VCmpxNleF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNeqF32Vopc::VCmpxNeqF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_neq_f32_dpp"
-               : "v_cmpx_neq_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_neq_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeqF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -3997,10 +3673,7 @@ VCmpxNeqF32Vopc::VCmpxNeqF32Vopc(const MachineInst *inst)
 }
 
 VCmpxNltF32Vopc::VCmpxNltF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlt_f32_dpp"
-               : "v_cmpx_nlt_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlt_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNltF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4039,10 +3712,7 @@ VCmpxNltF32Vopc::VCmpxNltF32Vopc(const MachineInst *inst)
 }
 
 VCmpxLtF64Vopc::VCmpxLtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_f64_dpp"
-               : "v_cmpx_lt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4068,10 +3738,7 @@ VCmpxLtF64Vopc::VCmpxLtF64Vopc(const MachineInst *inst)
 }
 
 VCmpxEqF64Vopc::VCmpxEqF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_f64_dpp"
-               : "v_cmpx_eq_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4097,10 +3764,7 @@ VCmpxEqF64Vopc::VCmpxEqF64Vopc(const MachineInst *inst)
 }
 
 VCmpxLeF64Vopc::VCmpxLeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_f64_dpp"
-               : "v_cmpx_le_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4126,10 +3790,7 @@ VCmpxLeF64Vopc::VCmpxLeF64Vopc(const MachineInst *inst)
 }
 
 VCmpxGtF64Vopc::VCmpxGtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_f64_dpp"
-               : "v_cmpx_gt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4155,10 +3816,7 @@ VCmpxGtF64Vopc::VCmpxGtF64Vopc(const MachineInst *inst)
 }
 
 VCmpxLgF64Vopc::VCmpxLgF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lg_f64_dpp"
-               : "v_cmpx_lg_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lg_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLgF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4184,10 +3842,7 @@ VCmpxLgF64Vopc::VCmpxLgF64Vopc(const MachineInst *inst)
 }
 
 VCmpxGeF64Vopc::VCmpxGeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_f64_dpp"
-               : "v_cmpx_ge_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4213,10 +3868,7 @@ VCmpxGeF64Vopc::VCmpxGeF64Vopc(const MachineInst *inst)
 }
 
 VCmpxOF64Vopc::VCmpxOF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_o_f64_dpp"
-               : "v_cmpx_o_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_o_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxOF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4242,10 +3894,7 @@ VCmpxOF64Vopc::VCmpxOF64Vopc(const MachineInst *inst)
 }
 
 VCmpxUF64Vopc::VCmpxUF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_u_f64_dpp"
-               : "v_cmpx_u_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_u_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxUF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4271,10 +3920,7 @@ VCmpxUF64Vopc::VCmpxUF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNgeF64Vopc::VCmpxNgeF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nge_f64_dpp"
-               : "v_cmpx_nge_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nge_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgeF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4300,10 +3946,7 @@ VCmpxNgeF64Vopc::VCmpxNgeF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNlgF64Vopc::VCmpxNlgF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlg_f64_dpp"
-               : "v_cmpx_nlg_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlg_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNlgF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4329,10 +3972,7 @@ VCmpxNlgF64Vopc::VCmpxNlgF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNgtF64Vopc::VCmpxNgtF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ngt_f64_dpp"
-               : "v_cmpx_ngt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ngt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNgtF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4358,10 +3998,7 @@ VCmpxNgtF64Vopc::VCmpxNgtF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNleF64Vopc::VCmpxNleF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nle_f64_dpp"
-               : "v_cmpx_nle_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nle_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNleF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4387,10 +4024,7 @@ VCmpxNleF64Vopc::VCmpxNleF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNeqF64Vopc::VCmpxNeqF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_neq_f64_dpp"
-               : "v_cmpx_neq_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_neq_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeqF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4416,10 +4050,7 @@ VCmpxNeqF64Vopc::VCmpxNeqF64Vopc(const MachineInst *inst)
 }
 
 VCmpxNltF64Vopc::VCmpxNltF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_nlt_f64_dpp"
-               : "v_cmpx_nlt_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_nlt_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNltF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -4445,10 +4076,7 @@ VCmpxNltF64Vopc::VCmpxNltF64Vopc(const MachineInst *inst)
 }
 
 VCmpxLtI16Vopc::VCmpxLtI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_i16_dpp"
-               : "v_cmpx_lt_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4469,7 +4097,7 @@ VCmpxLtI16Vopc::VCmpxLtI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4477,7 +4105,7 @@ VCmpxLtI16Vopc::VCmpxLtI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4490,10 +4118,7 @@ VCmpxLtI16Vopc::VCmpxLtI16Vopc(const MachineInst *inst)
 }
 
 VCmpxEqI16Vopc::VCmpxEqI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_i16_dpp"
-               : "v_cmpx_eq_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4514,7 +4139,7 @@ VCmpxEqI16Vopc::VCmpxEqI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4522,7 +4147,7 @@ VCmpxEqI16Vopc::VCmpxEqI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4535,10 +4160,7 @@ VCmpxEqI16Vopc::VCmpxEqI16Vopc(const MachineInst *inst)
 }
 
 VCmpxLeI16Vopc::VCmpxLeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_i16_dpp"
-               : "v_cmpx_le_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4559,7 +4181,7 @@ VCmpxLeI16Vopc::VCmpxLeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4567,7 +4189,7 @@ VCmpxLeI16Vopc::VCmpxLeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4580,10 +4202,7 @@ VCmpxLeI16Vopc::VCmpxLeI16Vopc(const MachineInst *inst)
 }
 
 VCmpxGtI16Vopc::VCmpxGtI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_i16_dpp"
-               : "v_cmpx_gt_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4604,7 +4223,7 @@ VCmpxGtI16Vopc::VCmpxGtI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4612,7 +4231,7 @@ VCmpxGtI16Vopc::VCmpxGtI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4625,10 +4244,7 @@ VCmpxGtI16Vopc::VCmpxGtI16Vopc(const MachineInst *inst)
 }
 
 VCmpxNeI16Vopc::VCmpxNeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_i16_dpp"
-               : "v_cmpx_ne_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4649,7 +4265,7 @@ VCmpxNeI16Vopc::VCmpxNeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4657,7 +4273,7 @@ VCmpxNeI16Vopc::VCmpxNeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4670,10 +4286,7 @@ VCmpxNeI16Vopc::VCmpxNeI16Vopc(const MachineInst *inst)
 }
 
 VCmpxGeI16Vopc::VCmpxGeI16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_i16_dpp"
-               : "v_cmpx_ge_i16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_i16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeI16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4694,7 +4307,7 @@ VCmpxGeI16Vopc::VCmpxGeI16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4702,7 +4315,7 @@ VCmpxGeI16Vopc::VCmpxGeI16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4715,10 +4328,7 @@ VCmpxGeI16Vopc::VCmpxGeI16Vopc(const MachineInst *inst)
 }
 
 VCmpxLtU16Vopc::VCmpxLtU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_u16_dpp"
-               : "v_cmpx_lt_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4739,7 +4349,7 @@ VCmpxLtU16Vopc::VCmpxLtU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4747,7 +4357,7 @@ VCmpxLtU16Vopc::VCmpxLtU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4760,10 +4370,7 @@ VCmpxLtU16Vopc::VCmpxLtU16Vopc(const MachineInst *inst)
 }
 
 VCmpxEqU16Vopc::VCmpxEqU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_u16_dpp"
-               : "v_cmpx_eq_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4784,7 +4391,7 @@ VCmpxEqU16Vopc::VCmpxEqU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4792,7 +4399,7 @@ VCmpxEqU16Vopc::VCmpxEqU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4805,10 +4412,7 @@ VCmpxEqU16Vopc::VCmpxEqU16Vopc(const MachineInst *inst)
 }
 
 VCmpxLeU16Vopc::VCmpxLeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_u16_dpp"
-               : "v_cmpx_le_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4829,7 +4433,7 @@ VCmpxLeU16Vopc::VCmpxLeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4837,7 +4441,7 @@ VCmpxLeU16Vopc::VCmpxLeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4850,10 +4454,7 @@ VCmpxLeU16Vopc::VCmpxLeU16Vopc(const MachineInst *inst)
 }
 
 VCmpxGtU16Vopc::VCmpxGtU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_u16_dpp"
-               : "v_cmpx_gt_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4874,7 +4475,7 @@ VCmpxGtU16Vopc::VCmpxGtU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4882,7 +4483,7 @@ VCmpxGtU16Vopc::VCmpxGtU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4895,10 +4496,7 @@ VCmpxGtU16Vopc::VCmpxGtU16Vopc(const MachineInst *inst)
 }
 
 VCmpxNeU16Vopc::VCmpxNeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_u16_dpp"
-               : "v_cmpx_ne_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4919,7 +4517,7 @@ VCmpxNeU16Vopc::VCmpxNeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4927,7 +4525,7 @@ VCmpxNeU16Vopc::VCmpxNeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4940,10 +4538,7 @@ VCmpxNeU16Vopc::VCmpxNeU16Vopc(const MachineInst *inst)
 }
 
 VCmpxGeU16Vopc::VCmpxGeU16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_u16_dpp"
-               : "v_cmpx_ge_u16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_u16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeU16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -4964,7 +4559,7 @@ VCmpxGeU16Vopc::VCmpxGeU16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -4972,7 +4567,7 @@ VCmpxGeU16Vopc::VCmpxGeU16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -4985,10 +4580,7 @@ VCmpxGeU16Vopc::VCmpxGeU16Vopc(const MachineInst *inst)
 }
 
 VCmpxLtI32Vopc::VCmpxLtI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_i32_dpp"
-               : "v_cmpx_lt_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5027,10 +4619,7 @@ VCmpxLtI32Vopc::VCmpxLtI32Vopc(const MachineInst *inst)
 }
 
 VCmpxEqI32Vopc::VCmpxEqI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_i32_dpp"
-               : "v_cmpx_eq_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5069,10 +4658,7 @@ VCmpxEqI32Vopc::VCmpxEqI32Vopc(const MachineInst *inst)
 }
 
 VCmpxLeI32Vopc::VCmpxLeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_i32_dpp"
-               : "v_cmpx_le_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5111,10 +4697,7 @@ VCmpxLeI32Vopc::VCmpxLeI32Vopc(const MachineInst *inst)
 }
 
 VCmpxGtI32Vopc::VCmpxGtI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_i32_dpp"
-               : "v_cmpx_gt_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5153,10 +4736,7 @@ VCmpxGtI32Vopc::VCmpxGtI32Vopc(const MachineInst *inst)
 }
 
 VCmpxNeI32Vopc::VCmpxNeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_i32_dpp"
-               : "v_cmpx_ne_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5195,10 +4775,7 @@ VCmpxNeI32Vopc::VCmpxNeI32Vopc(const MachineInst *inst)
 }
 
 VCmpxGeI32Vopc::VCmpxGeI32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_i32_dpp"
-               : "v_cmpx_ge_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeI32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5237,10 +4814,7 @@ VCmpxGeI32Vopc::VCmpxGeI32Vopc(const MachineInst *inst)
 }
 
 VCmpxLtU32Vopc::VCmpxLtU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_u32_dpp"
-               : "v_cmpx_lt_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5279,10 +4853,7 @@ VCmpxLtU32Vopc::VCmpxLtU32Vopc(const MachineInst *inst)
 }
 
 VCmpxEqU32Vopc::VCmpxEqU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_u32_dpp"
-               : "v_cmpx_eq_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5321,10 +4892,7 @@ VCmpxEqU32Vopc::VCmpxEqU32Vopc(const MachineInst *inst)
 }
 
 VCmpxLeU32Vopc::VCmpxLeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_u32_dpp"
-               : "v_cmpx_le_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5363,10 +4931,7 @@ VCmpxLeU32Vopc::VCmpxLeU32Vopc(const MachineInst *inst)
 }
 
 VCmpxGtU32Vopc::VCmpxGtU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_u32_dpp"
-               : "v_cmpx_gt_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5405,10 +4970,7 @@ VCmpxGtU32Vopc::VCmpxGtU32Vopc(const MachineInst *inst)
 }
 
 VCmpxNeU32Vopc::VCmpxNeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_u32_dpp"
-               : "v_cmpx_ne_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5447,10 +5009,7 @@ VCmpxNeU32Vopc::VCmpxNeU32Vopc(const MachineInst *inst)
 }
 
 VCmpxGeU32Vopc::VCmpxGeU32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_u32_dpp"
-               : "v_cmpx_ge_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeU32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5489,10 +5048,7 @@ VCmpxGeU32Vopc::VCmpxGeU32Vopc(const MachineInst *inst)
 }
 
 VCmpxLtI64Vopc::VCmpxLtI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_i64_dpp"
-               : "v_cmpx_lt_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5518,10 +5074,7 @@ VCmpxLtI64Vopc::VCmpxLtI64Vopc(const MachineInst *inst)
 }
 
 VCmpxEqI64Vopc::VCmpxEqI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_i64_dpp"
-               : "v_cmpx_eq_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5547,10 +5100,7 @@ VCmpxEqI64Vopc::VCmpxEqI64Vopc(const MachineInst *inst)
 }
 
 VCmpxLeI64Vopc::VCmpxLeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_i64_dpp"
-               : "v_cmpx_le_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5576,10 +5126,7 @@ VCmpxLeI64Vopc::VCmpxLeI64Vopc(const MachineInst *inst)
 }
 
 VCmpxGtI64Vopc::VCmpxGtI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_i64_dpp"
-               : "v_cmpx_gt_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5605,10 +5152,7 @@ VCmpxGtI64Vopc::VCmpxGtI64Vopc(const MachineInst *inst)
 }
 
 VCmpxNeI64Vopc::VCmpxNeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_i64_dpp"
-               : "v_cmpx_ne_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5634,10 +5178,7 @@ VCmpxNeI64Vopc::VCmpxNeI64Vopc(const MachineInst *inst)
 }
 
 VCmpxGeI64Vopc::VCmpxGeI64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_i64_dpp"
-               : "v_cmpx_ge_i64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_i64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeI64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5663,10 +5204,7 @@ VCmpxGeI64Vopc::VCmpxGeI64Vopc(const MachineInst *inst)
 }
 
 VCmpxLtU64Vopc::VCmpxLtU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_lt_u64_dpp"
-               : "v_cmpx_lt_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_lt_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLtU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5692,10 +5230,7 @@ VCmpxLtU64Vopc::VCmpxLtU64Vopc(const MachineInst *inst)
 }
 
 VCmpxEqU64Vopc::VCmpxEqU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_eq_u64_dpp"
-               : "v_cmpx_eq_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_eq_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxEqU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5721,10 +5256,7 @@ VCmpxEqU64Vopc::VCmpxEqU64Vopc(const MachineInst *inst)
 }
 
 VCmpxLeU64Vopc::VCmpxLeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_le_u64_dpp"
-               : "v_cmpx_le_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_le_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxLeU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5750,10 +5282,7 @@ VCmpxLeU64Vopc::VCmpxLeU64Vopc(const MachineInst *inst)
 }
 
 VCmpxGtU64Vopc::VCmpxGtU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_gt_u64_dpp"
-               : "v_cmpx_gt_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_gt_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGtU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5779,10 +5308,7 @@ VCmpxGtU64Vopc::VCmpxGtU64Vopc(const MachineInst *inst)
 }
 
 VCmpxNeU64Vopc::VCmpxNeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ne_u64_dpp"
-               : "v_cmpx_ne_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ne_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxNeU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5808,10 +5334,7 @@ VCmpxNeU64Vopc::VCmpxNeU64Vopc(const MachineInst *inst)
 }
 
 VCmpxGeU64Vopc::VCmpxGeU64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_ge_u64_dpp"
-               : "v_cmpx_ge_u64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_ge_u64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxGeU64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5837,10 +5360,7 @@ VCmpxGeU64Vopc::VCmpxGeU64Vopc(const MachineInst *inst)
 }
 
 VCmpxClassF16Vopc::VCmpxClassF16Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_class_f16_dpp"
-               : "v_cmpx_class_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_class_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxClassF16Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(16, OperandType::OPR_SRC,
@@ -5861,7 +5381,7 @@ VCmpxClassF16Vopc::VCmpxClassF16Vopc(const MachineInst *inst)
                     reinterpret_cast<const VopcInstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const VopcVopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -5869,7 +5389,7 @@ VCmpxClassF16Vopc::VCmpxClassF16Vopc(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const VopcVopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -5882,10 +5402,7 @@ VCmpxClassF16Vopc::VCmpxClassF16Vopc(const MachineInst *inst)
 }
 
 VCmpxClassF32Vopc::VCmpxClassF32Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_class_f32_dpp"
-               : "v_cmpx_class_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_class_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxClassF32Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -5924,10 +5441,7 @@ VCmpxClassF32Vopc::VCmpxClassF32Vopc(const MachineInst *inst)
 }
 
 VCmpxClassF64Vopc::VCmpxClassF64Vopc(const MachineInst *inst)
-    : Vopc(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cmpx_class_f64_dpp"
-               : "v_cmpx_class_f64_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vopc("v_cmpx_class_f64_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCmpxClassF64Vopc)),
       exec(64, OperandType::OPR_EXEC, 126),
       src0(64, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),

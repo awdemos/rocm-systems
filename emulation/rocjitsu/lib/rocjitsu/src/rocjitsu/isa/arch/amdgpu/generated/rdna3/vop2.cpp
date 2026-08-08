@@ -13,10 +13,7 @@ namespace rocjitsu {
 namespace rdna3 {
 
 VCndmaskB32Vop2::VCndmaskB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cndmask_b32_dpp"
-               : "v_cndmask_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_cndmask_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCndmaskB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -53,10 +50,7 @@ VCndmaskB32Vop2::VCndmaskB32Vop2(const MachineInst *inst)
 }
 
 VDot2accF32F16Vop2::VDot2accF32F16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_dot2acc_f32_f16_dpp"
-               : "v_dot2acc_f32_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_dot2acc_f32_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VDot2accF32F16Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -91,10 +85,7 @@ VDot2accF32F16Vop2::VDot2accF32F16Vop2(const MachineInst *inst)
 }
 
 VAddF32Vop2::VAddF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_add_f32_dpp"
-               : "v_add_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_add_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAddF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -128,10 +119,7 @@ VAddF32Vop2::VAddF32Vop2(const MachineInst *inst)
 }
 
 VSubF32Vop2::VSubF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_sub_f32_dpp"
-               : "v_sub_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_sub_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -165,10 +153,7 @@ VSubF32Vop2::VSubF32Vop2(const MachineInst *inst)
 }
 
 VSubrevF32Vop2::VSubrevF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_subrev_f32_dpp"
-               : "v_subrev_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_subrev_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubrevF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -202,10 +187,7 @@ VSubrevF32Vop2::VSubrevF32Vop2(const MachineInst *inst)
 }
 
 VFmacDx9ZeroF32Vop2::VFmacDx9ZeroF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmac_dx9_zero_f32_dpp"
-               : "v_fmac_dx9_zero_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmac_dx9_zero_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmacDx9ZeroF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -226,10 +208,7 @@ VFmacDx9ZeroF32Vop2::VFmacDx9ZeroF32Vop2(const MachineInst *inst)
 }
 
 VMulDx9ZeroF32Vop2::VMulDx9ZeroF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_dx9_zero_f32_dpp"
-               : "v_mul_dx9_zero_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_dx9_zero_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulDx9ZeroF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -263,10 +242,7 @@ VMulDx9ZeroF32Vop2::VMulDx9ZeroF32Vop2(const MachineInst *inst)
 }
 
 VMulF32Vop2::VMulF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_f32_dpp"
-               : "v_mul_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -300,10 +276,7 @@ VMulF32Vop2::VMulF32Vop2(const MachineInst *inst)
 }
 
 VMulI32I24Vop2::VMulI32I24Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_i32_i24_dpp"
-               : "v_mul_i32_i24_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_i32_i24_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulI32I24Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -337,10 +310,7 @@ VMulI32I24Vop2::VMulI32I24Vop2(const MachineInst *inst)
 }
 
 VMulHiI32I24Vop2::VMulHiI32I24Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_hi_i32_i24_dpp"
-               : "v_mul_hi_i32_i24_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_hi_i32_i24_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulHiI32I24Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -374,10 +344,7 @@ VMulHiI32I24Vop2::VMulHiI32I24Vop2(const MachineInst *inst)
 }
 
 VMulU32U24Vop2::VMulU32U24Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_u32_u24_dpp"
-               : "v_mul_u32_u24_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_u32_u24_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulU32U24Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -411,10 +378,7 @@ VMulU32U24Vop2::VMulU32U24Vop2(const MachineInst *inst)
 }
 
 VMulHiU32U24Vop2::VMulHiU32U24Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_hi_u32_u24_dpp"
-               : "v_mul_hi_u32_u24_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_hi_u32_u24_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulHiU32U24Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -448,10 +412,7 @@ VMulHiU32U24Vop2::VMulHiU32U24Vop2(const MachineInst *inst)
 }
 
 VMinF32Vop2::VMinF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_min_f32_dpp"
-               : "v_min_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_min_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMinF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -485,10 +446,7 @@ VMinF32Vop2::VMinF32Vop2(const MachineInst *inst)
 }
 
 VMaxF32Vop2::VMaxF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_max_f32_dpp"
-               : "v_max_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_max_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMaxF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -522,10 +480,7 @@ VMaxF32Vop2::VMaxF32Vop2(const MachineInst *inst)
 }
 
 VMinI32Vop2::VMinI32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_min_i32_dpp"
-               : "v_min_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_min_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMinI32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -559,10 +514,7 @@ VMinI32Vop2::VMinI32Vop2(const MachineInst *inst)
 }
 
 VMaxI32Vop2::VMaxI32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_max_i32_dpp"
-               : "v_max_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_max_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMaxI32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -596,10 +548,7 @@ VMaxI32Vop2::VMaxI32Vop2(const MachineInst *inst)
 }
 
 VMinU32Vop2::VMinU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_min_u32_dpp"
-               : "v_min_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_min_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMinU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -633,10 +582,7 @@ VMinU32Vop2::VMinU32Vop2(const MachineInst *inst)
 }
 
 VMaxU32Vop2::VMaxU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_max_u32_dpp"
-               : "v_max_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_max_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMaxU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -670,10 +616,7 @@ VMaxU32Vop2::VMaxU32Vop2(const MachineInst *inst)
 }
 
 VLshlrevB32Vop2::VLshlrevB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_lshlrev_b32_dpp"
-               : "v_lshlrev_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_lshlrev_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VLshlrevB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -707,10 +650,7 @@ VLshlrevB32Vop2::VLshlrevB32Vop2(const MachineInst *inst)
 }
 
 VLshrrevB32Vop2::VLshrrevB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_lshrrev_b32_dpp"
-               : "v_lshrrev_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_lshrrev_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VLshrrevB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -744,10 +684,7 @@ VLshrrevB32Vop2::VLshrrevB32Vop2(const MachineInst *inst)
 }
 
 VAshrrevI32Vop2::VAshrrevI32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_ashrrev_i32_dpp"
-               : "v_ashrrev_i32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_ashrrev_i32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAshrrevI32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -781,10 +718,7 @@ VAshrrevI32Vop2::VAshrrevI32Vop2(const MachineInst *inst)
 }
 
 VAndB32Vop2::VAndB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_and_b32_dpp"
-               : "v_and_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_and_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAndB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -818,10 +752,7 @@ VAndB32Vop2::VAndB32Vop2(const MachineInst *inst)
 }
 
 VOrB32Vop2::VOrB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_or_b32_dpp"
-               : "v_or_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_or_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VOrB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -855,10 +786,7 @@ VOrB32Vop2::VOrB32Vop2(const MachineInst *inst)
 }
 
 VXorB32Vop2::VXorB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_xor_b32_dpp"
-               : "v_xor_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_xor_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VXorB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -892,10 +820,7 @@ VXorB32Vop2::VXorB32Vop2(const MachineInst *inst)
 }
 
 VXnorB32Vop2::VXnorB32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_xnor_b32_dpp"
-               : "v_xnor_b32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_xnor_b32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VXnorB32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -929,10 +854,7 @@ VXnorB32Vop2::VXnorB32Vop2(const MachineInst *inst)
 }
 
 VAddCoCiU32Vop2::VAddCoCiU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_add_co_ci_u32_dpp"
-               : "v_add_co_ci_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_add_co_ci_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAddCoCiU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       vcc(64, OperandType::OPR_VCC, 106),
@@ -972,10 +894,7 @@ VAddCoCiU32Vop2::VAddCoCiU32Vop2(const MachineInst *inst)
 }
 
 VSubCoCiU32Vop2::VSubCoCiU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_sub_co_ci_u32_dpp"
-               : "v_sub_co_ci_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_sub_co_ci_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubCoCiU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       vcc(64, OperandType::OPR_VCC, 106),
@@ -1015,10 +934,7 @@ VSubCoCiU32Vop2::VSubCoCiU32Vop2(const MachineInst *inst)
 }
 
 VSubrevCoCiU32Vop2::VSubrevCoCiU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_subrev_co_ci_u32_dpp"
-               : "v_subrev_co_ci_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_subrev_co_ci_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubrevCoCiU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       vcc(64, OperandType::OPR_VCC, 106),
@@ -1058,10 +974,7 @@ VSubrevCoCiU32Vop2::VSubrevCoCiU32Vop2(const MachineInst *inst)
 }
 
 VAddNcU32Vop2::VAddNcU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_add_nc_u32_dpp"
-               : "v_add_nc_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_add_nc_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAddNcU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1095,10 +1008,7 @@ VAddNcU32Vop2::VAddNcU32Vop2(const MachineInst *inst)
 }
 
 VSubNcU32Vop2::VSubNcU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_sub_nc_u32_dpp"
-               : "v_sub_nc_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_sub_nc_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubNcU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1132,10 +1042,7 @@ VSubNcU32Vop2::VSubNcU32Vop2(const MachineInst *inst)
 }
 
 VSubrevNcU32Vop2::VSubrevNcU32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_subrev_nc_u32_dpp"
-               : "v_subrev_nc_u32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_subrev_nc_u32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubrevNcU32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1169,10 +1076,7 @@ VSubrevNcU32Vop2::VSubrevNcU32Vop2(const MachineInst *inst)
 }
 
 VFmacF32Vop2::VFmacF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmac_f32_dpp"
-               : "v_fmac_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmac_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmacF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1207,10 +1111,7 @@ VFmacF32Vop2::VFmacF32Vop2(const MachineInst *inst)
 }
 
 VFmamkF32Vop2::VFmamkF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmamk_f32_dpp"
-               : "v_fmamk_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmamk_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmamkF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1236,10 +1137,7 @@ VFmamkF32Vop2::VFmamkF32Vop2(const MachineInst *inst)
 }
 
 VFmaakF32Vop2::VFmaakF32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmaak_f32_dpp"
-               : "v_fmaak_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmaak_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmaakF32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1265,10 +1163,7 @@ VFmaakF32Vop2::VFmaakF32Vop2(const MachineInst *inst)
 }
 
 VCvtPkRtzF16F32Vop2::VCvtPkRtzF16F32Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_cvt_pk_rtz_f16_f32_dpp"
-               : "v_cvt_pk_rtz_f16_f32_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_cvt_pk_rtz_f16_f32_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VCvtPkRtzF16F32Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),
@@ -1302,10 +1197,7 @@ VCvtPkRtzF16F32Vop2::VCvtPkRtzF16F32Vop2(const MachineInst *inst)
 }
 
 VAddF16Vop2::VAddF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_add_f16_dpp"
-               : "v_add_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_add_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VAddF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1326,7 +1218,7 @@ VAddF16Vop2::VAddF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1334,7 +1226,7 @@ VAddF16Vop2::VAddF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1350,10 +1242,7 @@ void VAddF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VSubF16Vop2::VSubF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_sub_f16_dpp"
-               : "v_sub_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_sub_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1374,7 +1263,7 @@ VSubF16Vop2::VSubF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1382,7 +1271,7 @@ VSubF16Vop2::VSubF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1398,10 +1287,7 @@ void VSubF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VSubrevF16Vop2::VSubrevF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_subrev_f16_dpp"
-               : "v_subrev_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_subrev_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VSubrevF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1422,7 +1308,7 @@ VSubrevF16Vop2::VSubrevF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1430,7 +1316,7 @@ VSubrevF16Vop2::VSubrevF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1446,10 +1332,7 @@ void VSubrevF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VMulF16Vop2::VMulF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_mul_f16_dpp"
-               : "v_mul_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_mul_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMulF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1470,7 +1353,7 @@ VMulF16Vop2::VMulF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1478,7 +1361,7 @@ VMulF16Vop2::VMulF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1494,10 +1377,7 @@ void VMulF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VFmacF16Vop2::VFmacF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmac_f16_dpp"
-               : "v_fmac_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmac_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmacF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), true,
@@ -1519,7 +1399,7 @@ VFmacF16Vop2::VFmacF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1527,7 +1407,7 @@ VFmacF16Vop2::VFmacF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1543,10 +1423,7 @@ void VFmacF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VFmamkF16Vop2::VFmamkF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmamk_f16_dpp"
-               : "v_fmamk_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmamk_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmamkF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1584,10 +1461,7 @@ void VFmamkF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VFmaakF16Vop2::VFmaakF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_fmaak_f16_dpp"
-               : "v_fmaak_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_fmaak_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VFmaakF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1624,10 +1498,7 @@ void VFmaakF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VMaxF16Vop2::VMaxF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_max_f16_dpp"
-               : "v_max_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_max_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMaxF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1648,7 +1519,7 @@ VMaxF16Vop2::VMaxF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1656,7 +1527,7 @@ VMaxF16Vop2::VMaxF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1672,10 +1543,7 @@ void VMaxF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VMinF16Vop2::VMinF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_min_f16_dpp"
-               : "v_min_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_min_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VMinF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1696,7 +1564,7 @@ VMinF16Vop2::VMinF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1704,7 +1572,7 @@ VMinF16Vop2::VMinF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1720,10 +1588,7 @@ void VMinF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VLdexpF16Vop2::VLdexpF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_ldexp_f16_dpp"
-               : "v_ldexp_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_ldexp_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VLdexpF16Vop2)),
       vdst(16, OperandType::OPR_VGPR,
            static_cast<unsigned short>(reinterpret_cast<const OpEncoding *>(inst)->vdst), false,
@@ -1744,7 +1609,7 @@ VLdexpF16Vop2::VLdexpF16Vop2(const MachineInst *inst)
                     reinterpret_cast<const Vop2InstLiteralMachineInst *>(inst)->simm32 & 0xFFFFu)));
   if (amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)) {
     auto *dp8 = reinterpret_cast<const Vop2VopDpp8MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp8->vsrc0, true);
     dpp8_lane_sel_ = (dp8->lane_sel_0 << 0) | (dp8->lane_sel_1 << 3) | (dp8->lane_sel_2 << 6) |
                      (dp8->lane_sel_3 << 9) | (dp8->lane_sel_4 << 12) | (dp8->lane_sel_5 << 15) |
                      (dp8->lane_sel_6 << 18) | (dp8->lane_sel_7 << 21);
@@ -1752,7 +1617,7 @@ VLdexpF16Vop2::VLdexpF16Vop2(const MachineInst *inst)
   }
   if (reinterpret_cast<const OpEncoding *>(inst)->src0 == amdgpu::SRC_DPP) {
     auto *dp = reinterpret_cast<const Vop2VopDpp16MachineInst *>(inst);
-    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0);
+    src0 = Operand(16, OperandType::OPR_VGPR, dp->vsrc0, true);
     dpp_ctrl_ = dp->dpp_ctrl;
     dpp_row_mask_ = dp->row_mask;
     dpp_bank_mask_ = dp->bank_mask;
@@ -1768,10 +1633,7 @@ void VLdexpF16Vop2::implicit_uses(RegisterSet &uses) const {
 }
 
 VPkFmacF16Vop2::VPkFmacF16Vop2(const MachineInst *inst)
-    : Vop2(amdgpu::dpp::is_src_dpp8(reinterpret_cast<const OpEncoding *>(inst)->src0)
-               ? "v_pk_fmac_f16_dpp"
-               : "v_pk_fmac_f16_e32",
-           reinterpret_cast<const OpEncoding *>(inst),
+    : Vop2("v_pk_fmac_f16_e32", reinterpret_cast<const OpEncoding *>(inst),
            selected_exec_fn(InstructionExecutionId::VPkFmacF16Vop2)),
       vdst(32, OperandType::OPR_VGPR, reinterpret_cast<const OpEncoding *>(inst)->vdst),
       src0(32, OperandType::OPR_SRC, reinterpret_cast<const OpEncoding *>(inst)->src0),

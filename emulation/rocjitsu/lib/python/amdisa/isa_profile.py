@@ -54,6 +54,13 @@ class MemoryCoherencyModel(Enum):
     GFX12_SCOPE_TH = auto()  # RDNA4 — 2-bit SCOPE + TH hint
 
 
+class DppCtrlDialect(Enum):
+    """Names and validity rules for DPP_CTRL values."""
+
+    GFX9 = auto()
+    GFX10_PLUS = auto()
+
+
 @dataclass
 class EncodingModifier:
     """A disassembly modifier to append to an encoding's mnemonic output.
@@ -317,6 +324,21 @@ class IsaProfile(ABC):
     def uses_true16_vop3_opsel(self) -> bool:
         """True when VOP3 16-bit operands use op_sel half selectors."""
         return False
+
+    @property
+    def renders_true16_vop3_operands(self) -> bool:
+        """True when VOP3 operands use explicit ``.l``/``.h`` suffixes."""
+        return False
+
+    @property
+    def vop3_opsel_omissions(self) -> frozenset[str]:
+        """VOP3 instructions whose half selection is shown only on operands."""
+        return frozenset()
+
+    @property
+    def dpp_ctrl_dialect(self) -> DppCtrlDialect:
+        """DPP_CTRL naming and validity rules for this ISA."""
+        return DppCtrlDialect.GFX9
 
     @property
     def scalar_null_precedes_m0(self) -> bool:
@@ -675,7 +697,8 @@ _FLAT_MODIFIERS_GLC_DLC = [
     EncodingModifier('slc'),
 ]
 
-# GFX12 (RDNA4): SCOPE+TH model; flag modifier is NV only.
+# GFX12 (RDNA4): encoding-specific modifiers beyond the data-driven SCOPE+TH
+# cache policy emitted for every encoding that carries op/scope/th fields.
 _SMEM_MODIFIERS_RDNA4 = [
     EncodingModifier('nv'),
 ]
@@ -688,6 +711,10 @@ _VBUFFER_MODIFIERS_RDNA4 = [
 ]
 
 _VFLAT_MODIFIERS_RDNA4 = [
+    EncodingModifier('nv'),
+]
+
+_IMAGE_MODIFIERS_RDNA4 = [
     EncodingModifier('nv'),
 ]
 
@@ -1003,6 +1030,16 @@ class _AmdgpuProfileBase(IsaProfile):
         return ('op_sel', 'op_sel_hi')
 
     @property
+    def vop3p_opsel_hi_high_field(self) -> str:
+        """Return the machine field carrying VOP3P op_sel_hi bit 2."""
+        return 'op_sel_hi_2'
+
+    @property
+    def vop3_opsel_field(self) -> str:
+        """Return the source and destination half-selector field for VOP3."""
+        return 'op_sel'
+
+    @property
     def smem_direct_offset_field(self) -> str | None:
         """Field name of the direct SMEM immediate offset, or ``None``.
 
@@ -1300,6 +1337,10 @@ class Rdna1Profile(_AmdgpuProfileBase):
     _SKIP_DPP_SDWA = True
 
     @property
+    def dpp_ctrl_dialect(self) -> DppCtrlDialect:
+        return DppCtrlDialect.GFX10_PLUS
+
+    @property
     def waitcnt_lgkmcnt_mask(self) -> str:
         # RDNA1/2 uses a 6-bit lgkmcnt field at bits [13:8].
         return '0x3F'
@@ -1508,6 +1549,18 @@ class Rdna3Profile(_AmdgpuProfileBase):
         return True
 
     @property
+    def renders_true16_vop3_operands(self) -> bool:
+        return True
+
+    @property
+    def vop3_opsel_omissions(self) -> frozenset[str]:
+        return frozenset({'V_CNDMASK_B16'})
+
+    @property
+    def dpp_ctrl_dialect(self) -> DppCtrlDialect:
+        return DppCtrlDialect.GFX10_PLUS
+
+    @property
     def smem_direct_offset_field(self) -> str | None:
         return 'offset'
 
@@ -1657,6 +1710,18 @@ class Rdna4Profile(_AmdgpuProfileBase):
     def uses_true16_vop3_opsel(self) -> bool:
         return True
 
+    @property
+    def renders_true16_vop3_operands(self) -> bool:
+        return True
+
+    @property
+    def vop3_opsel_omissions(self) -> frozenset[str]:
+        return frozenset({'V_CNDMASK_B16'})
+
+    @property
+    def dpp_ctrl_dialect(self) -> DppCtrlDialect:
+        return DppCtrlDialect.GFX10_PLUS
+
     def mnemonic_rule(self, enc_name: str) -> MnemonicRule:
         """RDNA4 mnemonic rules.
 
@@ -1686,6 +1751,14 @@ class Rdna4Profile(_AmdgpuProfileBase):
         return ('opsel', 'opsel_hi')
 
     @property
+    def vop3p_opsel_hi_high_field(self) -> str:
+        return 'opsel_hi_2'
+
+    @property
+    def vop3_opsel_field(self) -> str:
+        return 'opsel'
+
+    @property
     def smem_direct_offset_field(self) -> str | None:
         return 'ioffset'
 
@@ -1696,7 +1769,8 @@ class Rdna4Profile(_AmdgpuProfileBase):
     def encoding_modifiers(self, enc_name: str) -> list[EncodingModifier]:
         """RDNA4 encoding modifiers.
 
-        Uses GFX12 SCOPE+TH model: SMEM/VBUFFER/VFLAT show only NV.
+        Render the GFX12 SCOPE+TH policy and NV flag for every memory encoding
+        that carries those fields.
         """
         upper = enc_name.upper()
         if upper == 'ENC_SMEM':
@@ -1705,6 +1779,8 @@ class Rdna4Profile(_AmdgpuProfileBase):
             return _VBUFFER_MODIFIERS_RDNA4
         if upper in ('ENC_VFLAT', 'ENC_VGLOBAL', 'ENC_VSCRATCH'):
             return _VFLAT_MODIFIERS_RDNA4
+        if upper in ('ENC_VIMAGE', 'ENC_VSAMPLE'):
+            return _IMAGE_MODIFIERS_RDNA4
         return []
 
 
@@ -1723,6 +1799,12 @@ class Gfx1250Profile(Rdna4Profile):
     @property
     def generated_dir_name(self) -> str | None:
         return 'cdna5'
+
+    @property
+    def vop3p_opsel_hi_high_field(self) -> str:
+        # CDNA5 reserves this bit under a different machine-field name, but it
+        # still carries the third VOP3P op_sel_hi bit.
+        return 'pad_14'
 
     @property
     def cpp_namespace(self) -> str | None:

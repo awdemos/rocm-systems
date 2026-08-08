@@ -21,6 +21,7 @@ from amdisa.isa_profile import (
     Cdna1Profile,
     Cdna2Profile,
     CdnaProfile,
+    DppCtrlDialect,
     Gfx1250Profile,
     MemoryCoherencyModel,
     Rdna1Profile,
@@ -29,6 +30,30 @@ from amdisa.isa_profile import (
     Rdna3_5Profile,
     Rdna4Profile,
 )
+
+
+@pytest.mark.parametrize(
+    (
+        'profile',
+        'renders_halves',
+        'opsel_field',
+        'vop3p_hi_high_field',
+        'dpp_dialect',
+    ),
+    [
+        (CdnaProfile(), False, 'op_sel', 'op_sel_hi_2', DppCtrlDialect.GFX9),
+        (Rdna4Profile(), True, 'opsel', 'opsel_hi_2', DppCtrlDialect.GFX10_PLUS),
+        (Gfx1250Profile(), True, 'opsel', 'pad_14', DppCtrlDialect.GFX10_PLUS),
+    ],
+)
+def test_vop3_disassembly_profile(
+    profile, renders_halves, opsel_field, vop3p_hi_high_field, dpp_dialect
+):
+    assert profile.uses_true16_vop3_opsel
+    assert profile.renders_true16_vop3_operands is renders_halves
+    assert profile.vop3_opsel_field == opsel_field
+    assert profile.vop3p_opsel_hi_high_field == vop3p_hi_high_field
+    assert profile.dpp_ctrl_dialect == dpp_dialect
 
 
 @pytest.mark.parametrize(

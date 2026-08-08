@@ -2336,8 +2336,8 @@ def test_gfx1250_generated_vop3_add_f16_applies_dpp(
     assert 'std::array<uint32_t, 3> raw_words_{};' in vop3_base
 
     vop3_encoding_ctor = _generated_constructor_body(encodings_cpp, 'Vop3')
-    assert 'inst_.src0 == amdgpu::SRC_DPP' in vop3_encoding_ctor
-    assert 'amdgpu::dpp::is_src_dpp8(inst_.src0)' in vop3_encoding_ctor
+    assert 'has_encoded_dpp()' in vop3_encoding_ctor
+    assert 'has_encoded_dpp8()' in vop3_encoding_ctor
     assert 'DPP and literal operands cannot be combined' in vop3_encoding_ctor
     assert vop3_encoding_ctor.index('DPP and literal operands cannot be combined') < (
         vop3_encoding_ctor.index('std::memcpy(raw_words_.data(), inst, size_);')
@@ -2383,9 +2383,12 @@ def test_generated_dpp8_disassembly_uses_encoding_state(
             assert class_match is not None
             assert 'owned_mnemonic_' not in class_match.group()
         assert 'dpp8_mnemonic' not in generated_cpp
-        assert re.search(r'\? "v_add_f16_dpp"\s*: "v_add_f16_e32"', generated_cpp)
+        assert 'void Vop1::append_mnemonic(std::string &out) const' in encodings_cpp
+        assert 'has_encoded_dpp() || has_encoded_dpp8()' in encodings_cpp
+        assert 'out += "_dpp";' in encodings_cpp
         if arch not in ('rdna1', 'rdna2'):
-            assert re.search(r'"v_rcp_f16_e64_dpp"\s*: "v_rcp_f16"', generated_cpp)
+            assert 'void Vop3::append_mnemonic(std::string &out) const' in encodings_cpp
+            assert 'out += "_e64_dpp";' in encodings_cpp
 
 
 def test_gfx1250_generated_vop3_rejects_literal64_selectors(
@@ -2473,6 +2476,102 @@ def test_gfx1250_compact_literal_policy_precedes_extension_sizing(
     assert 'LiteralSupport::Literal64' in fmamk_f64
     fmamk_f32 = _generated_constructor_body(vop2, 'VFmamkF32Vop2')
     assert 'LiteralSupport::Literal32' in fmamk_f32
+
+
+def test_generated_dpp_disassembly_uses_encoding_state(
+    amdgpu_generated_root: Path,
+) -> None:
+    for arch in ('cdna1', 'cdna2', 'cdna3', 'cdna4'):
+        generated_root = amdgpu_generated_root / arch
+        encodings_cpp = (generated_root / 'encodings.cpp').read_text()
+        assert 'void Vop1::append_mnemonic(std::string &out) const' in encodings_cpp
+        assert 'mnemonic_.ends_with("_e32")' in encodings_cpp
+        assert 'out += "_dpp";' in encodings_cpp
+        assert 'append_dpp16_disassembly' in encodings_cpp
+        assert 'dpp_bound_ctrl_, dpp_fi_, false,' in encodings_cpp
+        assert 'amdgpu::dpp::DppCtrlDialect::Gfx9' in encodings_cpp
+
+    for arch in ('rdna1', 'rdna2', 'rdna3', 'rdna3_5', 'rdna4', 'gfx1250'):
+        generated_root = amdgpu_generated_root / _generated_dir_name(arch)
+        encodings_cpp = (generated_root / 'encodings.cpp').read_text()
+        assert 'void Vop1::append_mnemonic(std::string &out) const' in encodings_cpp
+        assert 'mnemonic_.ends_with("_e32")' in encodings_cpp
+        assert 'out += "_dpp";' in encodings_cpp
+        assert 'append_dpp16_disassembly' in encodings_cpp
+        assert 'dpp_bound_ctrl_, dpp_fi_, true,' in encodings_cpp
+        assert 'amdgpu::dpp::DppCtrlDialect::Gfx10Plus' in encodings_cpp
+        assert 'append_dpp8_disassembly' in encodings_cpp
+
+
+@pytest.mark.parametrize('arch', ['cdna4', 'rdna4', 'gfx1250'])
+def test_generated_vop3p_disassembly_uses_encoding_state(
+    amdgpu_generated_root: Path,
+    arch: str,
+) -> None:
+    encodings_cpp = (
+        amdgpu_generated_root / _generated_dir_name(arch) / 'encodings.cpp'
+    ).read_text()
+    start = encodings_cpp.index('void Vop3p::build_modifiers')
+    vop3p_modifiers = encodings_cpp[start : start + 1000]
+    assert 'append_vop3p_disassembly' in vop3p_modifiers
+    assert 'vop3p_encoded_source_count()' in vop3p_modifiers
+    assert 'inst_.op' in vop3p_modifiers
+    if arch == 'gfx1250':
+        assert 'inst->opsel_hi | (inst->pad_14 << 2)' in vop3p_modifiers
+
+
+@pytest.mark.parametrize('arch', ['cdna4', 'rdna4'])
+def test_generated_vop3_disassembly_uses_encoding_state(
+    amdgpu_generated_root: Path,
+    arch: str,
+) -> None:
+    encodings_cpp = (amdgpu_generated_root / arch / 'encodings.cpp').read_text()
+    start = encodings_cpp.index('void Vop3::build_modifiers')
+    vop3_modifiers = encodings_cpp[start : start + 1000]
+    assert 'append_vop3_disassembly' in vop3_modifiers
+    assert 'vop3_encoded_source_count()' in vop3_modifiers
+    assert 'displays_vop3_op_sel()' in vop3_modifiers
+    assert 'mnemonic_' not in vop3_modifiers
+    assert 'void Vop3::append_src_operand' in encodings_cpp
+    assert 'append_vop3_operand' in encodings_cpp
+    if arch == 'rdna4':
+        assert 'const bool half_width = modifier_index >= 0 && true &&' in encodings_cpp
+
+
+@pytest.mark.parametrize('arch', ['cdna4', 'rdna4', 'gfx1250'])
+def test_generated_vop3_sdst_disassembly_uses_encoding_state(
+    amdgpu_generated_root: Path,
+    arch: str,
+) -> None:
+    encodings_cpp = (
+        amdgpu_generated_root / _generated_dir_name(arch) / 'encodings.cpp'
+    ).read_text()
+    start = encodings_cpp.index('void Vop3SdstEnc::build_modifiers')
+    modifiers = encodings_cpp[start : start + 1000]
+    assert 'append_vop3_disassembly' in modifiers
+    assert 'vop3_encoded_source_count()' in modifiers
+    assert 'void Vop3SdstEnc::append_src_operand' in encodings_cpp
+
+
+@pytest.mark.parametrize('arch', ['rdna4', 'gfx1250'])
+def test_gfx12_generated_cache_policy_disassembly(
+    amdgpu_generated_root: Path,
+    arch: str,
+) -> None:
+    generated_root = amdgpu_generated_root / _generated_dir_name(arch)
+    encodings = (generated_root / 'encodings.cpp').read_text()
+    assert '#include "rocjitsu/isa/arch/amdgpu/shared/gfx12_cache_flags.h"' in encodings
+    assert 'amdgpu::Gfx12TemporalHintKind::Atomic' in encodings
+    assert 'amdgpu::Gfx12TemporalHintKind::Store' in encodings
+    assert (
+        'amdgpu::append_gfx12_cache_policy(out, inst->th, inst->scope, hint_kind);'
+        in encodings
+    )
+    if arch == 'rdna4':
+        for class_name in ('Vimage', 'Vsample'):
+            start = encodings.index(f'void {class_name}::build_modifiers')
+            body = encodings[start : encodings.index('\n\n', start)]
+            assert 'append_gfx12_cache_policy' in body
 
 
 def test_generated_sdwa_uses_shared_source_staging(
@@ -2579,11 +2678,11 @@ def test_generated_dpp_encodings_own_extension_words(
             class_name,
         )
         if class_name in ('Vop3', 'Vop3p', 'Vop3SdstEnc'):
-            assert 'inst_.src0 == amdgpu::SRC_DPP' in constructor, (
+            assert 'has_encoded_dpp()' in constructor, (
                 arch,
                 class_name,
             )
-            assert 'amdgpu::dpp::is_src_dpp8(inst_.src0)' in constructor, (
+            assert 'has_encoded_dpp8()' in constructor, (
                 arch,
                 class_name,
             )
@@ -3435,12 +3534,12 @@ def test_gfx1250_scaled_wmma_skips_vop3p_extension_decode(
     for extension_step in (
         'throw util::InvalidInst("Vop3p does not support Literal64", "")',
         'has_lit_0()',
-        'inst_.src0 == amdgpu::SRC_DPP',
-        'amdgpu::dpp::is_src_dpp8(inst_.src0)',
         'std::memcpy(raw_words_.data(), inst, size_)',
         'raw_encoding_ = raw_words_.data()',
     ):
         assert extension_step in guarded_body
+    assert 'inst_.src0 == amdgpu::SRC_DPP' not in guarded_body
+    assert 'amdgpu::dpp::is_src_dpp8(inst_.src0)' not in guarded_body
 
     assert (
         'selected_exec_fn(InstructionExecutionId::VWmmaScaleF32Vop3px2), '

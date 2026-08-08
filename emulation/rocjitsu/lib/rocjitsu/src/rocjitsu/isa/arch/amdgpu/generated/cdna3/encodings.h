@@ -452,6 +452,9 @@ public:
 class Vop1 : public IsaInstruction<Isa> {
 public:
   Vop1(std::string_view mnemonic, const Vop1MachineInst *inst, ExecuteFn exec_fn);
+  bool has_encoded_dpp() const;
+  void append_mnemonic(std::string &out) const override;
+  void build_modifiers(std::string &out) const override;
   void implicit_uses(RegisterSet &uses) const override;
   bool default_encoding();
   bool has_lit();
@@ -511,6 +514,9 @@ public:
 class Vop2 : public IsaInstruction<Isa> {
 public:
   Vop2(std::string_view mnemonic, const Vop2MachineInst *inst, ExecuteFn exec_fn);
+  bool has_encoded_dpp() const;
+  void append_mnemonic(std::string &out) const override;
+  void build_modifiers(std::string &out) const override;
   void implicit_uses(RegisterSet &uses) const override;
   bool default_encoding();
   bool has_lit();
@@ -544,6 +550,8 @@ public:
 class Vop3p : public IsaInstruction<Isa> {
 public:
   Vop3p(std::string_view mnemonic, const Vop3pMachineInst *inst, ExecuteFn exec_fn);
+  uint32_t vop3p_encoded_source_count() const;
+  void build_modifiers(std::string &out) const override;
   using OpEncoding = Vop3pMachineInst;
   const OpEncoding inst_;
 };
@@ -551,6 +559,12 @@ public:
 class Vop3 : public IsaInstruction<Isa> {
 public:
   Vop3(std::string_view mnemonic, const Vop3MachineInst *inst, ExecuteFn exec_fn);
+  bool displays_vop3_op_sel() const;
+  uint32_t vop3_encoded_source_count() const;
+  int32_t vop3_encoded_source_index(uint8_t operand_index) const;
+  void build_modifiers(std::string &out) const override;
+  void append_src_operand(std::string &out, uint8_t operand_index) const override;
+  void append_dst_operand(std::string &out, uint8_t operand_index) const override;
   using OpEncoding = Vop3MachineInst;
   const OpEncoding inst_;
 };
@@ -591,6 +605,11 @@ public:
 class Vop3SdstEnc : public IsaInstruction<Isa> {
 public:
   Vop3SdstEnc(std::string_view mnemonic, const Vop3SdstEncMachineInst *inst, ExecuteFn exec_fn);
+  uint32_t vop3_encoded_source_count() const;
+  int32_t vop3_encoded_source_index(uint8_t operand_index) const;
+  void build_modifiers(std::string &out) const override;
+  void append_src_operand(std::string &out, uint8_t operand_index) const override;
+  void append_dst_operand(std::string &out, uint8_t operand_index) const override;
   using OpEncoding = Vop3SdstEncMachineInst;
   const OpEncoding inst_;
 };
