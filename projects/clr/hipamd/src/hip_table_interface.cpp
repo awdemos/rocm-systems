@@ -179,7 +179,7 @@ hipError_t hipBindTextureToMipmappedArray(const textureReference* tex,
   return hip::GetHipDispatchTable()->hipBindTextureToMipmappedArray_fn(tex, mipmappedArray, desc);
   CATCH;
 }
-extern "C" hipError_t hipChooseDevice(int* device, const hipDeviceProp_t* prop) {
+extern "C" hipError_t hipChooseDeviceR0600(int* device, const hipDeviceProp_tR0600* prop) {
   TRY;
   return hip::GetHipDispatchTable()->hipChooseDevice_fn(device, prop);
   CATCH;

@@ -108,6 +108,8 @@ function(hip_gen_exe_target)
 
     # Add dependency on build_tests to build it on this custom target
     add_dependencies(${_TEST_TARGET_NAME} ${_EXE_NAME})
+    # Force API version to 600, because we need to test every API on 600. Anything before that is not guaranteed.
+    target_compile_definitions(${_EXE_NAME} PRIVATE HIP_FORCE_API_VERSION=600)
 
     if (DEFINED _COMPILE_OPTIONS)
       target_compile_options(${_EXE_NAME} PUBLIC ${_COMPILE_OPTIONS})

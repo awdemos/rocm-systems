@@ -13,9 +13,6 @@
 #include "hip_mempool_impl.hpp"
 #include "hip_platform.hpp"
 
-#undef hipGetDeviceProperties
-#undef hipDeviceProp_t
-
 namespace hip {
 
 // ================================================================================================

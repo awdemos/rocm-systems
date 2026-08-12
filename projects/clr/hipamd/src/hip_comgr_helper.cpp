@@ -817,8 +817,8 @@ bool RTCProgram::findIsa() {
   if (status != hipSuccess) {
     return false;
   }
-  hipDeviceProp_t props;
-  status = hipGetDeviceProperties(&props, device);
+  hipDeviceProp_tR0600 props;
+  status = hipGetDevicePropertiesR0600(&props, device);
   if (status != hipSuccess) {
     return false;
   }
@@ -1102,7 +1102,7 @@ bool LinkProgram::LinkComplete(void** bin_out, size_t* size_out) {
   if (!findIsa()) {
     return false;
   }
- 
+
   hip::comgr_helper::ComgrDataSetUniqueHandle link_output;
   if (link_output.Create() != AMD_COMGR_STATUS_SUCCESS) {
     return false;

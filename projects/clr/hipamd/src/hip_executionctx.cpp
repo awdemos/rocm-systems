@@ -138,7 +138,7 @@ uint32_t ExecutionCtx::getSmAlignment(int deviceId) {
 }
 
 uint32_t ExecutionCtx::getTotalCuCount(int deviceId) {
-  hipDeviceProp_t prop{};
+  hipDeviceProp_tR0600 prop{};
   hipError_t status = ihipGetDeviceProperties(&prop, deviceId);
   if (status != hipSuccess) {
     LogPrintfError("Can't read device props for device id : %d", deviceId);
@@ -771,7 +771,7 @@ hipError_t hipStreamGetDevResource(hipStream_t hStream, hipDevResource* resource
       resource->type = hipDevResourceTypeSm;
       const auto& cuMask = stream->GetCUMask();
       if (cuMask.empty()) {
-        hipDeviceProp_t prop{};
+        hipDeviceProp_tR0600 prop{};
         HIP_RETURN_ONFAIL(ihipGetDeviceProperties(&prop, stream->DeviceId()));
         resource->sm.smCount = prop.multiProcessorCount;
       } else {

@@ -173,6 +173,11 @@ target_include_directories(amdhip64
     ${PROJECT_BINARY_DIR}/include)
 
 target_compile_definitions(amdhip64 PRIVATE __HIP_PLATFORM_AMD__)
+
+# Because we need to support all APIs/ABIs since R0600, we should not
+# deprecate anything newer than that release.
+target_compile_definitions(amdhip64 PRIVATE HIP_FORCE_API_VERSION=0)
+
 target_link_libraries(amdhip64 PRIVATE ${OPENGL_LIBRARIES})
 target_link_libraries(amdhip64 PRIVATE ${CMAKE_DL_LIBS})
 # Add link to comgr, hsa-runtime and other required libraries in target files

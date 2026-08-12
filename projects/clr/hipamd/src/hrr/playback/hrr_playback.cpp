@@ -1062,8 +1062,8 @@ int main(int argc, char** argv) {
   HIP_CHECK(hipGetDeviceCount(&device_count));
   if (device_count == 0) { fprintf(stderr, "[HRR] No GPU devices found\n"); return 1; }
 
-  hipDeviceProp_t props{};
-  HIP_CHECK(hipGetDeviceProperties(&props, 0));
+  hipDeviceProp_tR0600 props{};
+  HIP_CHECK(hipGetDevicePropertiesR0600(&props, 0));
   printf("[HRR] Device  : %s (%s)\n", props.name, props.gcnArchName);
 
   // Partition events by thread_id — O(n), no re-scan needed at replay time

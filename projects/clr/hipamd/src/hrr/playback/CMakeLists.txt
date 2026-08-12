@@ -27,6 +27,9 @@ target_compile_definitions(hrr_reader PRIVATE
   HRR_API_ARGS_IMPLEMENTATION
   $<$<BOOL:${WIN32}>:NOMINMAX WIN32_LEAN_AND_MEAN>
 )
+# Because we need to support all APIs/ABIs since R0600, 
+target_compile_definitions(hrr_reader PRIVATE HIP_FORCE_API_VERSION=0)
+
 
 # ---------------------------------------------------------------------------
 # hrr-playback — full replay tool
@@ -44,6 +47,7 @@ target_include_directories(hrr-playback PRIVATE
   ${PROJECT_SOURCE_DIR}/include
   ${PROJECT_BINARY_DIR}/include
 )
+target_compile_definitions(hrr-playback PRIVATE HIP_FORCE_API_VERSION=0)
 target_compile_definitions(hrr-playback PRIVATE
   __HIP_PLATFORM_AMD__
   $<$<BOOL:${WIN32}>:NOMINMAX WIN32_LEAN_AND_MEAN>

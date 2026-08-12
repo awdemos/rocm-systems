@@ -799,7 +799,7 @@ namespace hip {
   extern hipError_t ihipUnbindTexture(textureReference* texRef);
   extern hipError_t ihipHostRegister(void* hostPtr, size_t sizeBytes, unsigned int flags);
   extern hipError_t ihipHostUnregister(void* hostPtr);
-  extern hipError_t ihipGetDeviceProperties(hipDeviceProp_t* props, hipDevice_t device);
+  extern hipError_t ihipGetDeviceProperties(hipDeviceProp_tR0600* props, hipDevice_t device);
 
   extern hipError_t ihipDeviceGet(hipDevice_t* device, int deviceId);
   extern hipError_t ihipStreamOperation(hipStream_t stream, cl_command_type cmdType, void* ptr,

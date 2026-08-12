@@ -9,9 +9,6 @@
 #include "hip_internal.hpp"
 #include "hip_platform.hpp"
 
-#undef hipChooseDevice
-#undef hipDeviceProp_t
-
 namespace hip {
 
 hipError_t hipGetDevicePropertiesR0000(hipDeviceProp_tR0000* prop, int device);
