@@ -681,6 +681,7 @@ if(BUILD_TESTS)
       DeviceApiMPITests.cpp
       CommNetMismatchMPITests.cpp
       test_sparse_send_recv.cpp
+      SymmetricAbortCheckModeMPITests.cpp
     )
 
     add_executable(rccl-UnitTestsMPI ${MPI_TEST_SOURCE_FILES})
