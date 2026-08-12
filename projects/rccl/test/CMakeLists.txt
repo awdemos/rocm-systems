@@ -377,6 +377,7 @@ if(BUILD_TESTS)
       NetSocketTests.cpp
       PluginCompatV11_test.cpp
       ProxyTests.cpp
+      PatAlgorithmTests.cpp
       RcclWrapTests.cpp
       SocketPollTests.cpp
       TransportTests.cpp
