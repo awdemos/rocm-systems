@@ -208,7 +208,7 @@ void TestGimDeviceEnumeration::Run() {
 
     uint64_t serial = 0;
     EXPECT_TRUE(GimClient::parse_asic_serial(info.asic_serial, serial))
-        << "unparseable serial '" << info.asic_serial << "' for " << dev.bdf;
+        << "unparsable serial '" << info.asic_serial << "' for " << dev.bdf;
     // The per-GPU ASIC serial is the CUID hardware fingerprint; duplicates
     // would collapse multiple GPUs into a single CUID.
     EXPECT_TRUE(seen_serials.insert(serial).second)
