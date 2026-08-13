@@ -22,6 +22,7 @@
 #include "core/concepts.hpp"
 #include "core/config.hpp"
 #include "core/constraint.hpp"
+#include "core/constraint_deps.hpp"
 #include "core/control/clocks/posix.hpp"
 #include "core/control/clocks/steady.hpp"
 #include "core/control/session.hpp"
@@ -433,6 +434,8 @@ using trace_window_t =
     rocprofsys::control::triggers::time_window<rocprofsys::control::clocks::steady>;
 using posix_trace_window_t =
     rocprofsys::control::triggers::time_window<rocprofsys::control::clocks::posix>;
+using trace_config_t = rocprofsys::constraint::trace_config<
+    rocprofsys::constraint::default_trace_config_externals>;
 
 // Constructs a time_window<Clock>, which self-registers with the session
 // (and its initial action is reflected) before force_initial_pause() runs.
@@ -730,7 +733,7 @@ rocprofsys_init_tooling_hidden(void)
             auto subscribers = std::to_array<control::subscriber>({
                 { .on_pause = &rocprofiler_sdk::pause, .on_resume = &rocprofiler_sdk::resume, .name = "rocm" },
                 { .on_pause = &sampling::pause, .on_resume = &sampling::resume, .name = "sampling",
-                  .scopes = { control::scope::global, control::scope::sampling_only } },
+                  .scopes = { control::scope::global, control::scope::sampling } },
                 { .on_pause = &component::mpi_gotcha::pause, .on_resume = &component::mpi_gotcha::resume, .name = "mpi" },
                 { .on_pause = &ucx_t::pause, .on_resume = &ucx_t::resume, .name = "ucx" },
                 { .on_pause = &shmem_t::pause, .on_resume = &shmem_t::resume, .name = "shmem" },
@@ -745,7 +748,8 @@ rocprofsys_init_tooling_hidden(void)
             for(auto& sub : subscribers)
                 g_control_session->subscribe(std::move(sub));
 
-            if(auto _trace_specs = constraint::get_trace_specs(); !_trace_specs.empty())
+            if(auto _trace_specs = trace_config_t::get_trace_specs();
+               !_trace_specs.empty())
             {
                 const auto& _spec  = _trace_specs.front();
                 const auto  _delay = std::chrono::nanoseconds{ static_cast<std::int64_t>(
@@ -765,7 +769,8 @@ rocprofsys_init_tooling_hidden(void)
                       },
                       "trace_categories" });
 
-                if(constraint::get_trace_period_clock_id() == CLOCK_PROCESS_CPUTIME_ID)
+                if(trace_config_t::get_trace_period_clock_id() ==
+                   CLOCK_PROCESS_CPUTIME_ID)
                 {
                     g_posix_window_clock.emplace(CLOCK_PROCESS_CPUTIME_ID);
                     g_posix_trace_window =
@@ -788,7 +793,7 @@ rocprofsys_init_tooling_hidden(void)
                         {},
                         std::chrono::nanoseconds{
                             static_cast<std::int64_t>(_samp_dur * units::sec) } },
-                    control::scope::sampling_only);
+                    control::scope::sampling);
             }
 
             rocprofiler_sdk::create_roctx_client();
