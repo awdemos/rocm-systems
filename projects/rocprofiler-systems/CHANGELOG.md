@@ -11,6 +11,11 @@ Full documentation for ROCm Systems Profiler is available at [https://rocm.docs.
 - `ROCPROFSYS_SAMPLING_GPUS` is now restricted by the GPUs the ROCm runtime exposes
   via `ROCR_VISIBLE_DEVICES` / `HIP_VISIBLE_DEVICES`.
 
+- Pausing sampling now stops the underlying per-thread timers instead of only
+  discarding the samples they produce. Previously a paused sampler kept delivering
+  timer signals, so the profiled application's sleeps were still interrupted
+  throughout a window in which no data was being collected.
+
 ### Fixed
 
 - `ROCPROFSYS_TRACE_DELAY`/`ROCPROFSYS_TRACE_DURATION` now actually gate GPU context
