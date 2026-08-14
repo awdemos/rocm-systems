@@ -812,6 +812,7 @@ TestColl() {
   # check in the ring all-reduce path; this is a pre-existing bug unrelated to
   # work/sync pool alignment, so it is only run at 2 ranks here.
   ExecTest  "teamreduction"    2       1            64        32768
+  ExecTest  "teamreduction"    3       1            64        32768
   ExecTest  "teamreduction"    4       1            64        32768
   ExecTest  "teamreduction"    8       1            64        32768
 
@@ -824,6 +825,7 @@ TestColl() {
     ExecTest  "alltoall_wave"    2       1            $WAVE_SIZE        512
     ExecTest  "fcollect_wave"    2       1            $WAVE_SIZE        32768
     ExecTest  "reduce_wave"      2       1            $WAVE_SIZE        32768
+    ExecTest  "reduce_wave"      3       1            $WAVE_SIZE        32768
     ExecTest  "reduce_wave"      4       1            $WAVE_SIZE        32768
     ExecTest  "reduce_wave"      8       1            $WAVE_SIZE        32768
     ExecTest  "teamreducescatterwave" 2      1            $WAVE_SIZE   32768
