@@ -37,7 +37,6 @@
 #include "lib/common/logging.hpp"
 #include "lib/common/static_object.hpp"
 #include "lib/common/utility.hpp"
-#include "lib/rocprofiler-sdk/agent.hpp"
 #include "lib/rocprofiler-sdk/code_object/code_object.hpp"
 #include "lib/rocprofiler-sdk/context/context.hpp"
 #include "lib/rocprofiler-sdk/hsa/hsa.hpp"
@@ -45,6 +44,8 @@
 #include "lib/rocprofiler-sdk/hsa/signal_pool.hpp"
 #include "lib/rocprofiler-sdk/internal_threading.hpp"
 #include "lib/rocprofiler-sdk/kernel_dispatch/tracing.hpp"
+#include "lib/rocprofiler-sdk/kfd/kfd_profiler.hpp"
+#include "lib/rocprofiler-sdk/kfd/kfd_reader.hpp"
 #include "lib/rocprofiler-sdk/kfd/signal_less.hpp"
 #include "lib/rocprofiler-sdk/registration.hpp"
 #include "lib/rocprofiler-sdk/tracing/tracing.hpp"
@@ -553,6 +554,80 @@ submit_to_task_group(kfd::signal_less_hub_t::proven& proven)
     return true;
 }
 
+bool
+is_dispatch_packet(const rocprofiler_packet& pkt)
+{
+    auto _type = bit_extract(pkt.kernel_dispatch.header,
+                             HSA_PACKET_HEADER_TYPE,
+                             HSA_PACKET_HEADER_TYPE + HSA_PACKET_HEADER_WIDTH_TYPE - 1);
+    if(_type == HSA_PACKET_TYPE_KERNEL_DISPATCH) return true;
+#if HSA_AMD_EXT_API_TABLE_STEP_VERSION >= 0x0D
+    if(_type == HSA_PACKET_TYPE_VENDOR_SPECIFIC)
+        return pkt.ext_kernel_dispatch.amd_format == HSA_AMD_PACKET_TYPE_EXT_KERNEL_DISPATCH;
+#endif
+    return false;
+}
+
+// Per-BATCH signal-less eligibility, decided ONCE before any packet is touched.
+// It must be final up front: a batch that has skipped its completion signals
+// cannot be moved back onto the signal path, so even "will the hub accept these
+// keys" is answered here. If ANY packet fails, the WHOLE batch keeps the signal
+// path.
+//
+// keys_out is indexed BY PACKET INDEX, so registration uses the exact keys the
+// hub validated here rather than re-deriving them from a second doorbell lookup
+// that could observe a different generation.
+bool
+signal_less_batch_eligible(Queue*                                            queue,
+                           const rocprofiler_packet*                         packets,
+                           uint64_t                                          num_packets,
+                           uint64_t                                          base_pkt_index,
+                           std::vector<std::optional<kfd::correlation_key>>* keys_out)
+{
+    keys_out->clear();
+
+    // Cheapest gate first: with the feature off this is one relaxed load.
+    if(kfd::signal_less_child_stale()) return false;
+    if(!kfd::signal_less_feature_enabled()) return false;
+
+    const auto _gpu_id = queue->get_agent().get_rocp_agent()->gpu_id;
+    if(!kfd::ensure_reader_session(static_cast<uint32_t>(_gpu_id))) return false;
+
+    auto _db = capture_doorbell_key(
+        static_cast<uint32_t>(_gpu_id), queue->get_id(), queue->intercept_queue());
+    if(!_db) return false;
+
+    keys_out->assign(num_packets, std::nullopt);
+    auto _flat = std::vector<kfd::correlation_key>{};
+    for(uint64_t i = 0; i < num_packets; ++i)
+    {
+        if(!is_dispatch_packet(packets[i])) continue;
+        auto _key =
+            kfd::correlation_key{_db->doorbell_off,
+                                 static_cast<uint32_t>((base_pkt_index + i) & 0xFFFFFFFFULL),
+                                 _db->generation,
+                                 static_cast<uint32_t>(_gpu_id)};
+        (*keys_out)[i] = _key;
+        _flat.emplace_back(_key);
+    }
+    if(_flat.empty())
+    {
+        keys_out->clear();
+        return false;
+    }
+
+    // can_register_batch() carries the session-mode gate. is_closing() is
+    // eligibility-only: a batch already past this point may still register, which
+    // is what the destroy path fences before it strands.
+    const auto _gpu      = static_cast<uint32_t>(_gpu_id);
+    const bool _eligible = kfd::owner_registry().slot_uniquely_owned(_gpu, _db->doorbell_off) &&
+                           kfd::signal_less_hub().can_register_batch(_flat) &&
+                           !kfd::signal_less_hub().is_closing(_gpu, _db->doorbell_off);
+
+    if(!_eligible) keys_out->clear();
+    return _eligible;
+}
+
 // Local kernel-dispatch tracing path: swaps in pooled completion signals,
 // runs KERNEL_DISPATCH_ENQUEUE tracer hooks, and prepares a completion-signal
 // waiter for the async signal handler pool. Strict 1:1 packet forwarding; does
@@ -562,7 +637,8 @@ write_interceptor(Queue*                                queue,
                   const void*                           packets,
                   uint64_t                              pkt_count,
                   hsa_amd_queue_intercept_packet_writer writer,
-                  async_signal_task_vector_t*           deferred_async_tasks)
+                  async_signal_task_vector_t*           deferred_async_tasks,
+                  uint64_t                              base_pkt_index)
 {
     using callback_record_t = packet_data_t::callback_record_t;
     using packet_vector_t   = common::container::small_vector<rocprofiler_packet, 512>;
@@ -660,6 +736,7 @@ write_interceptor(Queue*                                queue,
     auto process_packet_batch = [&queue, &corr_id, tracing_data_v, deferred_async_tasks](
                                     const rocprofiler_packet* _packets,
                                     uint64_t                  _num_packets,
+                                    uint64_t                  _base_pkt_index,
                                     const packet_writer_fn_t& _writer) {
         static constexpr auto null_signal = hsa_signal_t{.handle = 0};
 
@@ -676,6 +753,12 @@ write_interceptor(Queue*                                queue,
                                                   .enqueue_ts     = common::timestamp_ns(),
                                                   .correlation_id = corr_id,
                                                   .packet_data    = packet_data_array_t{}};
+
+        // Decided once for the whole batch, before any packet is modified.
+        auto       _signal_less_keys  = std::vector<std::optional<kfd::correlation_key>>{};
+        const bool _signal_less_batch = signal_less_batch_eligible(
+            queue, _packets, _num_packets, _base_pkt_index, &_signal_less_keys);
+        auto _signal_less_regs = std::vector<kfd::signal_less_hub_t::registration>{};
 
         // Searching across all the packets given during this write
         for(size_t i = 0; i < _num_packets; ++i)
@@ -771,6 +854,7 @@ write_interceptor(Queue*                                queue,
             _packet_data.kernel_packet = _packets[i];
             // create a reference for short hand access
             auto& kernel_packet = _packet_data.kernel_packet;
+
 #if HSA_AMD_EXT_API_TABLE_STEP_VERSION >= 0x0D
             auto& completion_signal =
                 is_ext_kernel_dispatch
@@ -794,14 +878,17 @@ write_interceptor(Queue*                                queue,
                 return nullptr;
             };
 
-            // No barrier packet: borrow a pooled signal if needed, then bump value by 1.
-            if(!existing_completion_signal)
-                _packet_data.pooled_signal = create_signal(&completion_signal);
+            if(!_signal_less_batch)
+            {
+                // No barrier packet: borrow a pooled signal if needed, then bump value by 1.
+                if(!existing_completion_signal)
+                    _packet_data.pooled_signal = create_signal(&completion_signal);
 
-            get_core_table()->hsa_signal_add_scacq_screl_fn(completion_signal, 1);
+                get_core_table()->hsa_signal_add_scacq_screl_fn(completion_signal, 1);
 
-            // set the completion signal to the kernel packet
-            _packet_data.completion_signal = completion_signal;
+                // set the completion signal to the kernel packet
+                _packet_data.completion_signal = completion_signal;
+            }
 
             // computes the "size" based on the offset of reserved_padding field
             constexpr auto kernel_dispatch_info_rt_size =
@@ -847,6 +934,25 @@ write_interceptor(Queue*                                queue,
                 thr_id,
                 ROCPROFILER_EXTERNAL_CORRELATION_REQUEST_KERNEL_DISPATCH);
 
+            if(_signal_less_batch && _signal_less_keys[i].has_value())
+            {
+                auto _reg           = kfd::signal_less_hub_t::registration{};
+                _reg.key            = *_signal_less_keys[i];
+                _reg.correlation_id = internal_corr_id;
+
+                auto& _pl           = _reg.payload;
+                _pl.callback_record = _packet_data.callback_record;
+                _pl.tracing_data    = _packet_data.tracing_data;
+                // The reference this payload inherits was taken by the
+                // add_ref_count()/add_kern_count() above; the finalizer releases it.
+                _pl.correlation_id = corr_id;
+                _pl.tid            = thr_id;
+                _pl.agent_id       = queue->get_agent().get_rocp_agent()->id;
+                _pl.enqueue_ts     = _info_session.enqueue_ts;
+
+                _signal_less_regs.emplace_back(std::move(_reg));
+            }
+
             // Stores the instrumentation pkt (i.e. AQL packets for counter collection)
             // along with an ID of the client we got the packet from (this will be returned via
             // completed_cb_t)
@@ -874,7 +980,33 @@ write_interceptor(Queue*                                queue,
         auto current_signal_value   = hsa_signal_value_t{0};
         auto _shared_info_session   = std::shared_ptr<queue_info_session_t>{};
 
-        if(!_info_session.packet_data.empty())
+        // Register the whole batch BEFORE the writer publishes any packet, so a
+        // firmware record can never arrive for a dispatch the hub has not seen.
+        const auto _signal_less_count = _signal_less_regs.size();
+        if(_signal_less_batch &&
+           !kfd::signal_less_hub().register_batch(std::move(_signal_less_regs)))
+        {
+            // Reachable only if another queue's collision quarantined this slot between
+            // eligibility and here. The packets already skipped their signals, so nothing
+            // else will retire these ids.
+            kfd::note_signal_less(kfd::signal_less_counter::register_refused, _signal_less_count);
+            for(auto& _reg : _signal_less_regs)
+            {
+                auto* _corr_id = _reg.payload.correlation_id;
+                if(_corr_id == nullptr) continue;
+                _corr_id->sub_kern_count();
+                _corr_id->sub_ref_count();
+            }
+            ROCP_WARNING << "KFD dispatch-log: signal-less batch registration refused; these "
+                            "dispatches will not be timed";
+        }
+        else if(_signal_less_batch)
+        {
+            kfd::note_signal_less(kfd::signal_less_counter::entry_registered, _signal_less_count);
+        }
+
+        // A signal-less batch has no completion signal to wait on.
+        if(!_info_session.packet_data.empty() && !_signal_less_batch)
         {
             last_completion_signal = _info_session.packet_data.back().completion_signal;
 
@@ -914,9 +1046,10 @@ write_interceptor(Queue*                                queue,
     ROCP_TRACE_IF(pkt_count > 1) << fmt::format(
         "[{}] Batching packets. Number of packets = {}", __FUNCTION__, pkt_count);
 
-    process_packet_batch(packets_arr, pkt_count, [&writer](packet_vector_t&& _packets) {
-        writer(_packets.data(), _packets.size());
-    });
+    process_packet_batch(
+        packets_arr, pkt_count, base_pkt_index, [&writer](packet_vector_t&& _packets) {
+            writer(_packets.data(), _packets.size());
+        });
 }
 }  // namespace
 
@@ -1071,7 +1204,8 @@ process_doorbell_impl(const queue_state_ptr_t& state,
                           source_snapshot,
                           pkt_count,
                           ring_buffer_writer,
-                          &deferred_async_tasks);
+                          &deferred_async_tasks,
+                          start_submit_pos);
     }
     else
     {

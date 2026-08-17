@@ -28,6 +28,9 @@
 #include "lib/rocprofiler-sdk/hsa/queue.hpp"
 #include "lib/rocprofiler-sdk/hsa/queue_interposition.hpp"
 #include "lib/rocprofiler-sdk/kfd/kfd_correlation.hpp"
+#include "lib/rocprofiler-sdk/kfd/kfd_profiler.hpp"
+#include "lib/rocprofiler-sdk/kfd/signal_less.hpp"
+#include "lib/rocprofiler-sdk/kfd/signal_less_gate.hpp"
 
 #include <hsa/amd_hsa_queue.h>
 #include <hsa/amd_hsa_signal.h>
@@ -389,6 +392,26 @@ QueueController::add_queue(hsa_queue_t*           id,
         });
     });
 
+    // Signal-less live-queue bookkeeping only: with the feature off, no live-queue
+    // ownership is tracked, so this is inert. EVERY live compute queue registers at
+    // creation because a queue that predates the session or never dispatches still
+    // owns its slot; a queue whose doorbell cannot be resolved registers with no
+    // slot, making every slot on its GPU non-injective.
+    if(kfd::signal_less_feature_enabled())
+    {
+        if(const auto* _queue = get_queue(*id))
+        {
+            auto       _slot = std::optional<uint32_t>{};
+            const auto _gpu_id =
+                static_cast<uint32_t>(_queue->get_agent().get_rocp_agent()->gpu_id);
+            if(auto _db =
+                   capture_doorbell_key(_gpu_id, _queue->get_id(), _queue->intercept_queue()))
+                _slot = _db->doorbell_off;
+
+            kfd::add_live_queue(_queue->get_id().handle, _gpu_id, _slot);
+        }
+    }
+
     if(create_interposition_state)
     {
         queue_interposition::create_queue_state(id);
@@ -404,6 +427,48 @@ QueueController::destroy_queue(hsa_queue_t* id)
 
     // return if queue does not exist
     if(!queue) return;
+
+    const auto _queue_token = queue->get_id().handle;
+
+    // Signal-less generation/reuse closure, before the doorbell generation is
+    // bumped. Inert with the feature off (pairs with the gated add_queue
+    // bookkeeping). The lock sequence is load-bearing:
+    //
+    //   1. begin_close: takes the hub lock and RELEASES it
+    //   2. fence:       takes gate_lock, holding NO hub lock
+    //   3. finish_close: takes the hub lock again (strand + quarantine)
+    //
+    // The enqueue path holds gate_lock while taking the hub lock, so this path
+    // must never hold the hub lock while waiting on gate_lock. It holds at most
+    // one of the two at any instant, so no cycle exists.
+    //
+    // Queue::sync() below does NOT cover the in-flight records: it waits on
+    // _active_kernels, which only the legacy path increments, so for an inline
+    // signal-less dispatch it returns immediately.
+    if(kfd::signal_less_feature_enabled())
+    {
+        kfd::begin_close_signal_less_queue(_queue_token);
+        queue_interposition::fence_queue_gate(id);
+        // Wait for the hardware to finish this queue's dispatches BEFORE deciding what
+        // to strand: an unfinished kernel has no EOP record yet. QueueState is still
+        // alive here (destroy_queue_state() runs further down) and gate_lock was fenced
+        // above, so next_submit_pos is final.
+        kfd::drain_close_signal_less_queue(_queue_token, [id](uint64_t _deadline_ns) {
+            return queue_interposition::wait_queue_hw_drained(id, _deadline_ns);
+        });
+        kfd::finish_close_signal_less_queue(_queue_token);
+    }
+
+    // KFD dispatch-log: retire this queue's doorbell binding (bumps generation
+    // so a reused doorbell cannot misattribute records to this dead queue). The
+    // gate keeps a forked child out of the DoorbellMap lock. For the signal path
+    // this bump is the protection; for signal-less the quarantine above is, and
+    // the two are independent.
+    if(kfd::kfd_dispatch_log_available()) kfd::doorbell_map().on_queue_destroyed(queue->get_id());
+
+    // Drop this queue's ownership so a surviving co-owner becomes injective again.
+    // Inert with the feature off; pairs with the gated add_live_queue above.
+    if(kfd::signal_less_feature_enabled()) kfd::remove_live_queue(_queue_token);
 
     queue_interposition::destroy_queue_state(id);
     queue->sync();
