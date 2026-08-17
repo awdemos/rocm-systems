@@ -37,6 +37,7 @@
 #include "lib/common/logging.hpp"
 #include "lib/common/static_object.hpp"
 #include "lib/common/utility.hpp"
+#include "lib/rocprofiler-sdk/agent.hpp"
 #include "lib/rocprofiler-sdk/code_object/code_object.hpp"
 #include "lib/rocprofiler-sdk/context/context.hpp"
 #include "lib/rocprofiler-sdk/hsa/hsa.hpp"
@@ -44,6 +45,7 @@
 #include "lib/rocprofiler-sdk/hsa/signal_pool.hpp"
 #include "lib/rocprofiler-sdk/internal_threading.hpp"
 #include "lib/rocprofiler-sdk/kernel_dispatch/tracing.hpp"
+#include "lib/rocprofiler-sdk/kfd/signal_less.hpp"
 #include "lib/rocprofiler-sdk/registration.hpp"
 #include "lib/rocprofiler-sdk/tracing/tracing.hpp"
 
@@ -461,6 +463,96 @@ async_signal_handler(hsa_signal_t                            completion_signal,
     }
 }
 
+// The no-signal finalizer. Runs on a task-group worker, or on the thread
+// flushing the retry owner -- never on the reader thread or under a hub lock.
+//
+// There is deliberately no HSA fallback: a signal-less dispatch never had an SDK
+// signal and the app may already have destroyed its own, so a convert/sanity
+// failure emits no record but still retires the correlation id.
+void
+complete_signal_less_dispatch(kfd::signal_less_hub_t::proven&& proven)
+{
+    auto&       _payload    = proven.payload;
+    const auto* _rocp_agent = agent::get_agent(_payload.agent_id);
+    auto        _hsa_agent  = agent::get_hsa_agent(_rocp_agent);
+
+    auto _convert = [&_hsa_agent](uint64_t ticks, uint64_t* out) {
+        if(!_hsa_agent) return false;
+        const auto* _ext = get_amd_ext_table();
+        if(!_ext || !_ext->hsa_amd_profiling_convert_tick_to_system_domain_fn) return false;
+        return _ext->hsa_amd_profiling_convert_tick_to_system_domain_fn(*_hsa_agent, ticks, out) ==
+               HSA_STATUS_SUCCESS;
+    };
+
+    auto _emit = [&_payload](uint64_t start_ns, uint64_t end_ns) {
+        kernel_dispatch::emit_kernel_dispatch_record(_payload.tracing_data,
+                                                     _payload.callback_record,
+                                                     _payload.correlation_id,
+                                                     _payload.tid,
+                                                     start_ns,
+                                                     end_ns);
+    };
+
+    // Retires exactly once whatever the outcome, and even if a client callback
+    // throws (run_complete_signal_less_dispatch arms this from a scope destructor).
+    auto _retire = [&_payload]() {
+        auto* _corr_id = _payload.correlation_id;
+        if(!_corr_id) return;
+        ROCP_FATAL_IF(_corr_id->get_ref_count() == 0)
+            << "reference counter for correlation id " << _corr_id->internal
+            << " has no reference count";
+        _corr_id->sub_kern_count();
+        _corr_id->sub_ref_count();
+    };
+
+    const uint64_t _now = common::timestamp_ns();
+
+    auto       _detail  = kfd::finalize_detail{};
+    const auto _outcome = kfd::run_complete_signal_less_dispatch(proven.start_ticks,
+                                                                 proven.end_ticks,
+                                                                 _payload.enqueue_ts,
+                                                                 _now,
+                                                                 _convert,
+                                                                 _emit,
+                                                                 _retire,
+                                                                 &_detail);
+
+    if(_outcome == kfd::finalize_outcome::result_ready)
+    {
+        kfd::note_signal_less(kfd::signal_less_counter::finalizer_emitted);
+        return;
+    }
+
+    kfd::note_signal_less(kfd::signal_less_counter::finalizer_no_timing);
+
+    // Rate-limited: the first few are the diagnostic, a steady stream must not
+    // flood the log.
+    static auto _warned = std::atomic<int>{0};
+    if(_warned.fetch_add(1, std::memory_order_relaxed) < 10)
+    {
+        ROCP_INFO << fmt::format(
+            "KFD dispatch-log: no timing for dispatch (reason={}, gpu={} slot={} idx={} gen={})",
+            kfd::finalize_reason_name(_detail.reason),
+            proven.key.gpu_id,
+            proven.key.doorbell_off,
+            proven.key.dispatch_idx_low32,
+            proven.key.generation);
+    }
+}
+
+bool
+submit_to_task_group(kfd::signal_less_hub_t::proven& proven)
+{
+    auto* _tg = get_async_signal_handler();
+    if(!_tg || registration::get_fini_status() != 0) return false;
+
+    // task_group_t::async takes a std::function, which must be copy-constructible;
+    // the payload is move-only, so it travels in a shared_ptr.
+    auto _held = std::make_shared<kfd::signal_less_hub_t::proven>(std::move(proven));
+    _tg->async([_held]() { complete_signal_less_dispatch(std::move(*_held)); });
+    return true;
+}
+
 // Local kernel-dispatch tracing path: swaps in pooled completion signals,
 // runs KERNEL_DISPATCH_ENQUEUE tracer hooks, and prepares a completion-signal
 // waiter for the async signal handler pool. Strict 1:1 packet forwarding; does
@@ -827,6 +919,52 @@ write_interceptor(Queue*                                queue,
     });
 }
 }  // namespace
+
+void
+fence_queue_gate(const hsa_queue_t* queue)
+{
+    auto state = lookup_queue_state(queue, /*create_if_missing=*/false);
+    if(!state) return;
+    // Acquire + release only. Nothing is called while it is held, so this cannot
+    // participate in a lock cycle.
+    auto lk = std::lock_guard<std::mutex>{state->gate_lock};
+}
+
+bool
+wait_queue_hw_drained(const hsa_queue_t* queue, uint64_t deadline_ns)
+{
+    auto state = lookup_queue_state(queue, /*create_if_missing=*/false);
+    if(!state || !state->real_rdid) return true;
+
+    // next_submit_pos is only written by process_doorbell_impl under gate_lock,
+    // and the caller fenced that gate before calling us, so it is final here.
+    const uint64_t _submit_pos = state->next_submit_pos;
+
+    while(!hw_queue_drained(__atomic_load_n(state->real_rdid, __ATOMIC_ACQUIRE), _submit_pos))
+    {
+        if(kfd::steady_now_ns() >= deadline_ns) return false;
+        std::this_thread::sleep_for(std::chrono::microseconds{200});
+    }
+    return true;
+}
+
+void
+fence_all_queue_gates()
+{
+    // Copy the states out from under the registry lock FIRST: taking a queue's
+    // gate_lock while holding it would invert the established order.
+    auto _states = std::vector<queue_state_ptr_t>{};
+    get_queue_registry().rlock([&_states](const auto& map) {
+        _states.reserve(map.size());
+        for(const auto& itr : map)
+            if(itr.second) _states.emplace_back(itr.second);
+    });
+
+    for(const auto& _state : _states)
+    {
+        auto lk = std::lock_guard<std::mutex>{_state->gate_lock};
+    }
+}
 
 void
 process_doorbell_impl(const queue_state_ptr_t& state,
@@ -1274,4 +1412,34 @@ interposition_fini()
 }
 }  // namespace queue_interposition
 }  // namespace hsa
+
+// Bridge for the KFD layer (declared in kfd/signal_less.hpp). Defined here so
+// kfd never needs the HSA interposition headers, and called directly -- both
+// sides are in the same object library.
+namespace kfd
+{
+bool
+submit_complete_signal_less_dispatch(signal_less_hub_t::proven& p)
+{
+    return hsa::queue_interposition::submit_to_task_group(p);
+}
+
+void
+finalize_complete_signal_less_dispatch(signal_less_hub_t::proven&& p)
+{
+    hsa::queue_interposition::complete_signal_less_dispatch(std::move(p));
+}
+
+void
+drain_signal_less_interceptor()
+{
+    hsa::queue_interposition::fence_all_queue_gates();
+}
+
+void
+join_signal_less_tasks()
+{
+    hsa::queue_interposition::interposition_sync();
+}
+}  // namespace kfd
 }  // namespace rocprofiler

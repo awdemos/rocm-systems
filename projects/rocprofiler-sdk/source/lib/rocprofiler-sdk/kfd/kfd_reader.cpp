@@ -33,6 +33,7 @@
 #include "lib/rocprofiler-sdk/kfd/kfd_profiler.hpp"
 #include "lib/rocprofiler-sdk/kfd/poll_reader.hpp"
 #include "lib/rocprofiler-sdk/kfd/record_pipe.hpp"
+#include "lib/rocprofiler-sdk/kfd/signal_less.hpp"
 #include "lib/rocprofiler-sdk/kfd/stream_geometry.hpp"
 #include "lib/rocprofiler-sdk/registration.hpp"
 
@@ -544,22 +545,39 @@ session_has_pending(const dlog_session& s)
     return false;
 }
 
-// STAGE 2, processor thread: pairs start/eop and updates the pairing census. All
-// the lock-taking work lives here, off the ring-reading path. It runs no client
-// callback itself.
+// STAGE 2, processor thread: pairs start/eop, resolves the generation, drives
+// the hub. All the lock-taking work lives here, off the ring-reading path. It
+// runs no client callback itself; hand_off_proven() submits to the task group.
 uint64_t
 process_batch(processor_state& proc, const record_batch& batch)
 {
     const uint32_t _gpu     = batch.gpu_id;
     auto&          _pairing = proc.for_gpu(_gpu);
 
-    // pair_records() updates the census counters in _pairing for every record; the
-    // per-EOP callback is required by its signature but has no consumer here.
     return pair_records(batch.records.data(),
                         batch.records.size(),
                         _pairing,
                         batch.now_ns,
-                        [](const drained_record&) {});
+                        [_gpu](const drained_record& rec) {
+                            uint32_t slot = doorbell_off_to_page_slot(rec.doorbell_off);
+                            uint32_t gen  = doorbell_map().get_generation(_gpu, slot);
+                            // gpu_id stamped from the ring this record came from: a record can
+                            // only ever match a dispatch enqueued on the same GPU.
+                            auto key = correlation_key{slot, rec.dispatch_id, gen, _gpu};
+
+                            // Signal-less: this EOP IS the completion event.
+                            if(rec.start_known)
+                                signal_less_hub().record_kernel_start(key, rec.start_ticks);
+                            auto _proven = signal_less_hub().record_kernel_end(
+                                key, rec.end_ticks, rec.loss_free);
+                            if(_proven)
+                            {
+                                note_signal_less(signal_less_counter::eop_proven);
+                                hand_off_proven(std::move(*_proven));
+                                return;
+                            }
+                            note_signal_less(signal_less_counter::eop_unmatched);
+                        });
 }
 
 // Two distinct conditions, reported separately so a growing processor backlog is
@@ -679,6 +697,8 @@ disable_reader_in_child()
     // Also latches kfd_dispatch_log_available() false, so the child never takes
     // the DoorbellMap lock a vanished thread may have been holding.
     disable_kfd_dispatch_log();
+
+    signal_less_abandon_in_child();
 
     auto& st = state();
     st.any_session_ready.store(false, std::memory_order_relaxed);
@@ -1045,7 +1065,8 @@ reader_loop()
     ROCP_INFO << fmt::format("KFD dispatch-log reader: loop exited, total pairs seen = {}",
                              total_seen);
 
-    // Summarise any actual ring loss once, on the reader's way out.
+    // Silent unless signal-less is active, so the default path logs exactly what
+    // it did before. The chain itself is summarised once, by teardown.
     uint64_t _ring_overruns = 0;
     uint64_t _ring_lost     = 0;
     for(size_t i = 0, _n = st.session_count.load(std::memory_order_acquire); i < _n; ++i)
@@ -1054,13 +1075,14 @@ reader_loop()
         _ring_lost += st.sessions[i].cursors.lost_records;
     }
 
-    ROCP_WARNING_IF(_ring_overruns > 0 || _ring_lost > 0) << fmt::format(
-        "KFD dispatch-log ring: {} lap(s), {} record(s) lost to laps, processor backlog "
-        "peaked at {} batch(es) -- a lost record is a lost START, which shows up as a "
-        "start-unknown no-timing",
-        _ring_overruns,
-        _ring_lost,
-        st.overflow_peak.load(std::memory_order_relaxed));
+    ROCP_WARNING_IF(signal_less_feature_enabled() && (_ring_overruns > 0 || _ring_lost > 0))
+        << fmt::format(
+               "KFD dispatch-log ring: {} lap(s), {} record(s) lost to laps, processor backlog "
+               "peaked at {} batch(es) -- a lost record is a lost START, which shows up as a "
+               "start-unknown no-timing",
+               _ring_overruns,
+               _ring_lost,
+               st.overflow_peak.load(std::memory_order_relaxed));
 }
 }  // namespace
 

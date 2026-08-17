@@ -212,6 +212,34 @@ create_queue_state(const hsa_queue_t* queue, bool overwrite = false);
 void
 destroy_queue_state(const hsa_queue_t* queue);
 
+// Acquiring the gate drains any in-flight doorbell processing; new admission is
+// already blocked by the earlier close step. The caller MUST hold no hub or
+// owner-registry lock: the enqueue path holds gate_lock while taking those.
+void
+fence_queue_gate(const hsa_queue_t* queue);
+
+// The same fence across EVERY live queue: teardown step 2 and the (a) fence of a
+// hub-aware sync. Same rule -- the caller must hold no hub, registry or gate lock.
+void
+fence_all_queue_gates();
+
+/// The hardware queue has consumed every packet we submitted. The inline path's
+/// analogue of `_active_kernels == 0`, which only the legacy path maintains.
+inline bool
+hw_queue_drained(uint64_t real_rdid, uint64_t next_submit_pos)
+{
+    return real_rdid >= next_submit_pos;
+}
+
+/// Wait, bounded by an absolute kfd::steady_now_ns() deadline, until this queue's
+/// hardware read index has caught up with everything we submitted, so a closing
+/// queue's EOP records exist before the caller decides anything was lost.
+///
+/// False on deadline; true immediately with no state or no submissions. Takes no
+/// lock: next_submit_pos is final because the caller fenced gate_lock first.
+bool
+wait_queue_hw_drained(const hsa_queue_t* queue, uint64_t deadline_ns);
+
 /**
  * @brief Check if queue interposition has been installed
  *
