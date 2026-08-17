@@ -97,51 +97,84 @@ TEST(complete_signal_less_dispatch, result_ready_emits_once_and_retires_once)
     EXPECT_EQ(obs.end, 900u + conv.epoch);
 }
 
-// Every no-timing shape (lost start, refused conversion, each sanity clause) must
-// emit nothing yet still retire exactly once -- completion is proven, not leaked.
-TEST(complete_signal_less_dispatch, no_timing_shapes_emit_nothing_but_retire_once)
+// Only a genuine conversion failure emits nothing: without a system-domain end
+// there is nowhere to place the record. It still retires exactly once -- completion
+// is proven, not leaked.
+TEST(complete_signal_less_dispatch, conversion_failure_emits_nothing_but_retires_once)
+{
+    auto obs     = observer{};
+    auto conv    = converter{/*ok=*/false, /*epoch=*/1'000'000};
+    auto outcome = run_complete_signal_less_dispatch(std::optional<uint64_t>{500},
+                                                     900,
+                                                     0,
+                                                     10'000'000,
+                                                     conv.fn(),
+                                                     obs.emit_fn(),
+                                                     obs.retire_fn());
+    EXPECT_EQ(outcome, finalize_outcome::completed_no_timing);
+    EXPECT_EQ(obs.emits, 0);
+    EXPECT_EQ(obs.retires, 1);
+}
+
+// A genuinely zero-duration interval -- identical firmware ticks, so START and EOP
+// converted to the same nanosecond -- is the one interval shape still dropped:
+// widening rescues distinct-but-quantized ticks, not a real zero. Retires once.
+TEST(complete_signal_less_dispatch, identical_ticks_zero_duration_is_dropped)
+{
+    auto obs     = observer{};
+    auto conv    = converter{true, /*epoch=*/1'000'000};
+    auto detail  = finalize_detail{};
+    auto outcome = run_complete_signal_less_dispatch(std::optional<uint64_t>{900},
+                                                     900,
+                                                     0,
+                                                     10'000'000,
+                                                     conv.fn(),
+                                                     obs.emit_fn(),
+                                                     obs.retire_fn(),
+                                                     &detail);
+    EXPECT_EQ(outcome, finalize_outcome::completed_no_timing);
+    EXPECT_EQ(obs.emits, 0);
+    EXPECT_EQ(obs.retires, 1);
+    EXPECT_EQ(detail.reason, finalize_reason::bad_interval);
+}
+
+// Every recoverable shape -- a lost START, or a conversion-skewed interval the
+// signal path would clamp -- now EMITS a record and retires exactly once, because
+// the EOP proved the dispatch ran and its converted end is a real timestamp that
+// anchors the record. Dropping these was the record loss behind AIPROFSDK-1041.
+TEST(complete_signal_less_dispatch, recoverable_shapes_emit_and_retire_once)
 {
     struct row
     {
         std::optional<uint64_t> start;
         uint64_t                end, enqueue, now;
-        bool                    convert_ok;
         uint64_t                epoch;
         const char*             label;
     };
     const row rows[] = {
-        {std::nullopt, 900, 0, 10'000'000, true, 1'000'000, "start lost (shape ii)"},
-        {std::optional<uint64_t>{500}, 900, 0, 10'000'000, false, 1'000'000, "conversion refused"},
+        {std::nullopt, 900, 0, 10'000'000, 1'000'000, "start lost (shape ii)"},
         {std::optional<uint64_t>{1},
          1000 + kKfdFutureSlackNs + 1,
          0,
          1000,
-         true,
          0,
          "end beyond now + slack"},
         {std::optional<uint64_t>{500},
          900,
          9'000'000,
          10'000'000,
-         true,
          1'000'000,
          "starts before enqueue"},
-        {std::optional<uint64_t>{900},
-         900,
-         0,
-         10'000'000,
-         true,
-         1'000'000,
-         "non-positive interval"},
+        {std::optional<uint64_t>{900}, 800, 0, 10'000'000, 1'000'000, "inverted -> swapped"},
     };
     for(const auto& tc : rows)
     {
         auto obs     = observer{};
-        auto conv    = converter{tc.convert_ok, tc.epoch};
+        auto conv    = converter{true, tc.epoch};
         auto outcome = run_complete_signal_less_dispatch(
             tc.start, tc.end, tc.enqueue, tc.now, conv.fn(), obs.emit_fn(), obs.retire_fn());
-        EXPECT_EQ(outcome, finalize_outcome::completed_no_timing) << tc.label;
-        EXPECT_EQ(obs.emits, 0) << tc.label;
+        EXPECT_EQ(outcome, finalize_outcome::result_ready) << tc.label;
+        EXPECT_EQ(obs.emits, 1) << tc.label;
         EXPECT_EQ(obs.retires, 1) << tc.label;
     }
 }
@@ -263,9 +296,9 @@ TEST(complete_signal_less_dispatch, reports_the_exact_rejection_cause)
          now - 1'000'000,
          0,
          true,
-         finalize_outcome::completed_no_timing,
+         finalize_outcome::result_ready,
          finalize_reason::start_unknown,
-         "shape ii: start lost"},
+         "shape ii: start lost -> emitted, end-anchored"},
         {now - 5'000'000,
          now - 1'000'000,
          0,
@@ -277,23 +310,23 @@ TEST(complete_signal_less_dispatch, reports_the_exact_rejection_cause)
          now - 5'000'000,
          0,
          true,
-         finalize_outcome::completed_no_timing,
+         finalize_outcome::result_ready,
          finalize_reason::bad_interval,
-         "non-positive interval"},
+         "inverted interval -> swapped + emitted"},
         {now - 5'000'000,
          now - 1'000'000,
          now - 2'000'000,
          true,
-         finalize_outcome::completed_no_timing,
+         finalize_outcome::result_ready,
          finalize_reason::before_enqueue,
-         "starts before enqueue"},
+         "starts before enqueue -> shifted + emitted"},
         {1,
          now + kKfdFutureSlackNs + 1,
          0,
          true,
-         finalize_outcome::completed_no_timing,
+         finalize_outcome::result_ready,
          finalize_reason::after_now,
-         "end beyond now + slack"},
+         "end beyond now + slack -> clamped + emitted"},
     };
     for(const auto& tc : rows)
     {

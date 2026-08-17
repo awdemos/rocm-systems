@@ -1216,6 +1216,13 @@ wait_for_reader_drain_barrier(uint64_t timeout_ns)
     // our records, so the second one is the first that is provably complete.
     while(st.drain_epoch.load(std::memory_order_acquire) < _start + 2)
     {
+        // Re-check liveness, not just on entry: stop_reader() clears running only after
+        // joining the reader and processor, so a reader that stops mid-wait has already
+        // drained and would otherwise freeze drain_epoch until the deadline. Deliberately
+        // not any_session_ready: the fatal poll path clears that one before the final
+        // copy, so records may still be unread and the timeout is the honest answer.
+        if(!st.running.load(std::memory_order_acquire)) return true;
+
         if(common::timestamp_ns() >= _deadline)
         {
             ROCP_WARNING << "KFD dispatch-log: timed out waiting for a reader drain barrier; "

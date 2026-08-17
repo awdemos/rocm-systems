@@ -311,49 +311,62 @@ pair_records(const copied_record* records,
              OnRecord&&           on_record)
 {
     uint64_t seen = 0;
-    for(size_t i = 0; i < count; ++i)
-    {
-        const auto& rec = records[i].rec;
-        if(rec.record_type == kRecPadding || rec.doorbell_off == 0) continue;
-
-        const uint64_t ts =
-            static_cast<uint64_t>(rec.ts_lo) | (static_cast<uint64_t>(rec.ts_hi) << 32);
-        const uint64_t key = (static_cast<uint64_t>(rec.doorbell_off) << 32) |
-                             static_cast<uint64_t>(rec.dispatch_id);
-
-        if(rec.record_type == kRecStart)
+    // Two passes over the batch: bind every START first, then match every EOP. A
+    // batch is one drain sweep of all regions in index order, and the HWS can
+    // remap a queue onto a lower-numbered MEC pipe between its START and its EOP,
+    // which puts the EOP in an earlier region than the START -- so in copy order
+    // the EOP can precede its own START within this one batch. Firmware always
+    // writes START before EOP and the sweep reads region k before region k+1, so
+    // a copied EOP's START is either in an earlier batch (already consumed) or
+    // later in THIS batch; binding all of this batch's STARTs before any EOP is
+    // therefore exact, not a heuristic, and removes the spurious start-unknown
+    // that the old single pass produced for a same-batch region reorder.
+    for(int pass = 0; pass < 2; ++pass)
+        for(size_t i = 0; i < count; ++i)
         {
-            ++state.starts_seen;
-            // dispatch_id is only low-32, so a key can recur.
-            if(state.pending_starts.count(key) != 0) ++state.starts_overwritten;
-            state.pending_starts[key] = pair_state::pending_start{ts, now_ns};
-            continue;
-        }
-        if(rec.record_type != kRecEop) continue;
-        ++state.eops_seen;
+            const auto& rec = records[i].rec;
+            if(rec.record_type == kRecPadding || rec.doorbell_off == 0) continue;
+            if(pass == 0 && rec.record_type != kRecStart) continue;
+            if(pass == 1 && rec.record_type == kRecStart) continue;
 
-        auto out         = drained_record{};
-        out.doorbell_off = rec.doorbell_off;
-        out.dispatch_id  = rec.dispatch_id;
-        out.end_ticks    = ts;
-        out.loss_free    = records[i].loss_free;
+            const uint64_t ts =
+                static_cast<uint64_t>(rec.ts_lo) | (static_cast<uint64_t>(rec.ts_hi) << 32);
+            const uint64_t key = (static_cast<uint64_t>(rec.doorbell_off) << 32) |
+                                 static_cast<uint64_t>(rec.dispatch_id);
 
-        auto it = state.pending_starts.find(key);
-        if(it != state.pending_starts.end())
-        {
-            out.start_ticks = it->second.start_ticks;
-            out.start_known = true;
-            state.pending_starts.erase(it);
-            ++seen;
+            if(rec.record_type == kRecStart)
+            {
+                ++state.starts_seen;
+                // dispatch_id is only low-32, so a key can recur.
+                if(state.pending_starts.count(key) != 0) ++state.starts_overwritten;
+                state.pending_starts[key] = pair_state::pending_start{ts, now_ns};
+                continue;
+            }
+            if(rec.record_type != kRecEop) continue;
+            ++state.eops_seen;
+
+            auto out         = drained_record{};
+            out.doorbell_off = rec.doorbell_off;
+            out.dispatch_id  = rec.dispatch_id;
+            out.end_ticks    = ts;
+            out.loss_free    = records[i].loss_free;
+
+            auto it = state.pending_starts.find(key);
+            if(it != state.pending_starts.end())
+            {
+                out.start_ticks = it->second.start_ticks;
+                out.start_known = true;
+                state.pending_starts.erase(it);
+                ++seen;
+            }
+            else
+            {
+                // The START was lost (shape ii): the EOP still proves the kernel
+                // finished, it just carries no interval.
+                ++state.unmatched_eops;
+            }
+            on_record(out);
         }
-        else
-        {
-            // The START was lost (shape ii): the EOP still proves the kernel
-            // finished, it just carries no interval.
-            ++state.unmatched_eops;
-        }
-        on_record(out);
-    }
     return seen;
 }
 }  // namespace kfd

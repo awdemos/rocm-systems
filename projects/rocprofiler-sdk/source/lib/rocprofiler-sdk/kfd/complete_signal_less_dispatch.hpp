@@ -100,42 +100,85 @@ resolve_finalize(const std::optional<uint64_t>& start_ticks,
         if(detail) detail->reason = r;
         return finalize_outcome::completed_no_timing;
     };
+    // Records the first repair reason for diagnostics without changing the outcome.
+    auto _flag = [detail](finalize_reason r) {
+        if(detail && detail->reason == finalize_reason::ready) detail->reason = r;
+    };
 
-    // Shape (ii): the EOP proved completion but its START was lost, so there is no
-    // interval to report.
-    if(!start_ticks) return _note(finalize_reason::start_unknown);
+    // The EOP end tick is always present and is a real GPU timestamp, so convert it
+    // first: it anchors the record on the timeline even when the START was lost.
+    if(!convert(end_ticks, end_ns_out)) return _note(finalize_reason::convert_failed);
 
-    if(!convert(*start_ticks, start_ns_out) || !convert(end_ticks, end_ns_out))
+    // Shape (ii), AIPROFSDK-1040: the EOP proved completion but its START was lost
+    // (a firmware START that lost the HWS-connect race, or one overwritten by a ring
+    // lap). The dispatch still ran and we know exactly when it finished, so anchor a
+    // record at that end -- start seeded to end, widened to a representable interval
+    // just below -- rather than dropping the row. The duration is the one unknown.
+    if(!start_ticks)
+    {
+        _flag(finalize_reason::start_unknown);
+        *start_ns_out = *end_ns_out;
+    }
+    else if(!convert(*start_ticks, start_ns_out))
+    {
         return _note(finalize_reason::convert_failed);
+    }
 
-    // Distinct firmware ticks can convert to the same nanosecond for a kernel
-    // short enough that the conversion quantizes the interval away. The duration
-    // is real and the completion was proven, so widen it to the smallest
-    // representable interval rather than discarding it below; consumers require
-    // start < end strictly, so equal timestamps cannot simply be accepted.
-    // Identical ticks are left alone: firmware reported no duration at all, which
-    // is the degenerate case the interval guard exists to catch.
-    if(*start_ns_out == *end_ns_out && *start_ticks != end_ticks) *end_ns_out = *start_ns_out + 1;
+    // Distinct firmware ticks can convert to the same nanosecond for a kernel short
+    // enough that the conversion quantizes the interval away; widen it to the
+    // smallest representable one and emit (AIPROFSDK-1041). A start-unknown record
+    // (no real start tick) is widened the same way. Identical raw ticks -- firmware
+    // reported no duration at all -- are deliberately left equal and fall through to
+    // the zero-duration guard below.
+    if(*start_ns_out == *end_ns_out)
+    {
+        if(!start_ticks)
+            // Start-unknown: preserve the real END (the EOP tick) and move the
+            // synthesized start back by one ns.
+            *start_ns_out = (*end_ns_out > 0) ? *end_ns_out - 1 : 0;
+        else if(*start_ticks != end_ticks)
+            // Distinct ticks quantized to the same ns: widen forward by one ns.
+            *end_ns_out = *start_ns_out + 1;
+        // Identical raw ticks are left equal and drop at the zero-duration guard.
+    }
 
-    // A record whose converted end is seconds past `now` is stale/lapped, not a
-    // conversion artifact; reject it before the clamp below can pull it back into
-    // range. The correlation key does the real discrimination; this only bounds
-    // the arithmetic.
-    if(*end_ns_out > now_ns + kKfdFutureSlackNs) return _note(finalize_reason::after_now);
+    // From here a skewed-but-nonzero interval is REPAIRED exactly the way the signal
+    // path repairs its own in tracing::adjust_profiling_time, and emitted -- never
+    // dropped, which was the record loss behind the no-timing class. Each repair is
+    // noted in `detail` so a spike stays attributable.
+
+    // Clock-skew inversion: the signal path swaps rather than drops.
+    if(*start_ns_out > *end_ns_out)
+    {
+        _flag(finalize_reason::bad_interval);
+        std::swap(*start_ns_out, *end_ns_out);
+    }
 
     // Tick-to-system-domain conversion re-syncs periodically, so a just-completed
-    // dispatch's converted end can land a small amount AFTER a `now` sampled right
-    // behind it. The signal path handles this in tracing::adjust_profiling_time by
-    // clamping the interval into [enqueue, now]; mirror that here so a signal-less
-    // end never lands after this dispatch's own retirement (sampled just after
-    // `now`). Shift the whole interval to preserve the measured duration, matching
-    // the signal path's operator-=/operator+=.
+    // dispatch's converted end can land a little after a `now` sampled right behind
+    // it, and its start a little before this dispatch's own enqueue (both observed in
+    // the low microseconds on gfx950). Mirror adjust_profiling_time: shift the whole
+    // interval so it ends no later than now, then so it starts no earlier than
+    // enqueue, preserving the measured duration. An end far past now is flagged stale
+    // but treated the same; the correlation key already proved this record is ours.
+    if(*end_ns_out > now_ns + kKfdFutureSlackNs) _flag(finalize_reason::after_now);
     if(*end_ns_out > now_ns)
     {
         const uint64_t _shift = *end_ns_out - now_ns;
         *end_ns_out           = now_ns;
         *start_ns_out         = (*start_ns_out > _shift) ? *start_ns_out - _shift : 0;
     }
+    if(*start_ns_out < enqueue_ts)
+    {
+        _flag(finalize_reason::before_enqueue);
+        const uint64_t _shift = enqueue_ts - *start_ns_out;
+        *start_ns_out += _shift;
+        *end_ns_out += _shift;
+    }
+
+    // The only remaining drop: a genuinely zero-duration interval (identical ticks),
+    // which no widening rescued above.
+    if(!(*start_ns_out < *end_ns_out)) return _note(finalize_reason::bad_interval);
 
     if(detail)
     {
@@ -143,10 +186,6 @@ resolve_finalize(const std::optional<uint64_t>& start_ticks,
         detail->start_ns  = *start_ns_out;
         detail->end_ns    = *end_ns_out;
     }
-
-    // Same correlation guard the signal path uses, reported clause by clause.
-    if(!(*start_ns_out < *end_ns_out)) return _note(finalize_reason::bad_interval);
-    if(*start_ns_out < enqueue_ts) return _note(finalize_reason::before_enqueue);
 
     return finalize_outcome::result_ready;
 }
