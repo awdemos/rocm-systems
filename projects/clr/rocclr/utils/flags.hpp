@@ -286,6 +286,9 @@ release(bool, DEBUG_CLR_DISABLE_FALLBACK, false,                              \
         "Disables certain fallback paths")                                    \
 release(bool, DEBUG_CLR_DIRECT_DOORBELL, false,                               \
         "Write the hardware doorbell directly from CLR")                      \
+release(bool, DEBUG_CLR_ORDER_DOORBELL, true,                                 \
+        "Order shared AQL ring doorbells by reservation. Left unset it "       \
+        "orders Intel hosts only, setting it decides for every host")         \
 release(uint, DEBUG_CLR_AQL_DEV_QUEUE, 0,                                     \
         "Device-memory AQL ring buffer for supported asics "                  \
         "(1=enabled, 0=force system mem (default))")                          \

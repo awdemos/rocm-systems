@@ -84,6 +84,12 @@ Settings::Settings() {
   max_hw_queues_ = GPU_MAX_HW_QUEUES;
   aql_barrier_opt_ = amd::IS_HIP && DEBUG_CLR_AQL_BARRIER_OPT;
 
+  // The multi-producer AQL ring race this ordering avoids has only been observed on Intel hosts, so
+  // an untouched flag orders those alone. Setting the flag decides for every host instead, which is
+  // how the ordered path gets exercised on AMD.
+  isOrderedDoorbell_ = flagIsDefault(DEBUG_CLR_ORDER_DOORBELL) ? amd::Os::isIntelCpu()
+                                                               : DEBUG_CLR_ORDER_DOORBELL;
+
   queue_pipe_dist_ = false;
 }
 
