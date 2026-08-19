@@ -94,6 +94,18 @@ deliberately locality-agnostic. For example, two 8-XCD GPUs permit up to 16
 partitions, while `num_threads: 4` assigns XCDs from both GPUs to each
 partition.
 
+Raising `num_threads` only pays off if the work reaches more than one XCD, which
+is decided by `HwQueue::xcd_fanout` rather than by how the queue was created (see
+*Queue ownership and XCD fan-out* in `vm-design.md`). KFD sets the flag for
+compute queues, and a test can opt in when it registers a queue directly; a queue
+without the flag keeps its whole grid on its owning XCD and leaves the other
+partitions idle no matter how `num_threads` is set.
+
+Setting the flag is not a guarantee that every partition gets work. A grid with
+fewer workgroups than the SoC has XCDs stays whole on the owner, and fan-out
+reaches only the XCDs of the SoC that owns the queue -- so in the two-GPU example
+above, one dispatch occupies at most the partitions covering its own GPU.
+
 ### Topology
 
 Components are defined hierarchically under `topology.root`. Range

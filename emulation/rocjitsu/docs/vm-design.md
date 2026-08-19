@@ -11,7 +11,8 @@ execution.
 | File | Purpose |
 |------|---------|
 | `soc.h/cpp` | SoC: top-level topology root, owns XCDs, IODs, and shared GPU memory |
-| `driver.h/cpp` | Driver: KMD interface, lifecycle state machine |
+| `virtual_machine.h/cpp` | VirtualMachine: topology root, owns the SoCs and the simulated KFD |
+| `kmd/linux/simulated_kfd.h/cpp` | SimulatedKfd: the KMD interface, serving the KFD ioctl surface |
 | `amdgpu/iod.h/cpp` | IOD: I/O die with memory-side cache and HBM controllers |
 | `amdgpu/memory_side_cache.h/cpp` | Memory-side cache component between L2 and HBM |
 | `amdgpu/hbm_controller.h` | HBM memory controller wrapping GpuMemory |
@@ -28,58 +29,120 @@ execution.
 ## Component Hierarchy
 
 ```
-SimulationEngine                       (simdojo - owns topology)
+SimulationEngine                           (simdojo - owns topology)
 └── Topology
-    └── SoC ("gpu_soc")               (CompositeComponent - topology root)
-        ├── Driver driver_             (value member, not a child component)
-        ├── GpuMemory ("memory")       (shared across all XCDs)
-        ├── Iod[0..I] ("iod0"..)      (CompositeComponent - memory-side cache + HBM controllers)
-        └── Xcd[0..N] ("xcd0"..)      (CompositeComponent)
-            ├── CommandProcessor ("cp") (Component - event-driven dispatch)
-            └── ShaderEngine[0..M]     (CompositeComponent)
-                └── ComputeUnit[0..K]  (CompositeComponent - register files + wavefront slots)
+    └── VirtualMachine                     (CompositeComponent - topology root)
+        ├── SimulatedKfd driver_            (owned member, not a child component)
+        └── SoC[0..G] ("gpu_soc"..)        (CompositeComponent, one per GPU)
+            ├── GpuMemory ("memory")        (shared across all XCDs)
+            ├── Iod[0..I] ("iod0"..)       (CompositeComponent - memory-side cache + HBM controllers)
+            └── Xcd[0..N] ("xcd0"..)       (CompositeComponent)
+                ├── CommandProcessor ("cp") (Component - event-driven dispatch)
+                └── ShaderEngine[0..M]      (CompositeComponent)
+                    └── ComputeUnit[0..K]   (CompositeComponent - register files + wavefront slots)
 ```
 
-The SoC is a `simdojo::CompositeComponent` set as the topology root. The
-simulation infrastructure (engine, topology, partitioning) is managed by
-`SimulationEngine`; the SoC represents the hardware being modeled.
+The `VirtualMachine` is a `simdojo::CompositeComponent` set as the topology root,
+and it owns the simulated KFD alongside its SoCs. The simulation infrastructure
+(engine, topology, partitioning) is managed by `SimulationEngine`; the SoC
+represents the hardware being modeled.
 
 ---
 
 ## Driver
 
 The Driver models the kernel-mode driver (KMD) interface presented to a
-user-mode driver (e.g., rocr). It is owned as a value member of
-SoC (`Driver driver_{*this}`) - the driver is part of the hardware, not
-external software.
+user-mode driver (e.g., rocr). It is an abstract interface rather than a member
+of `SoC`; the concrete implementation is the simulated KFD, which the
+interception layer routes a guest process's driver syscalls to.
 
-The Driver is a thin bridge between the application and the simulation
-engine. It exposes two methods:
+It therefore exposes a syscall surface rather than a dispatch entry point:
 
-- `submit(DispatchPacket, uint32_t xcd_idx)` - enqueues a dispatch packet
-  on the target XCD's command processor doorbell queue.
-- `close()` - shuts down the simulation by calling
-  `engine()->request_exit()`.
+- `open()` / `close()` - open and close the driver device.
+- `ioctl(request, arg)` - the KFD ioctl surface, including the queue creation
+  path described under *Queue ownership and XCD fan-out* below.
+- `mmap()` / `munmap()` - map driver-owned memory, such as the doorbell page.
+
+Work does not reach the hardware through this interface. A process creates a HW
+queue through `ioctl`, and thereafter submits by writing that queue's ring and
+ringing its doorbell, which the owning XCD's command processor polls.
 
 ---
 
 ## Command Processor
 
 The CP reads dispatch packets and distributes wavefronts across registered
-compute units in round-robin order.
+compute units in round-robin order. Each XCD has its own CP, and a CP is wired
+only to its own XCD's compute units.
+
+### Queue ownership and XCD fan-out
+
+`SoC::assign_queue_owner_cp()` rotates HW queues across the XCDs. The XCD it
+returns *owns* the queue: it alone reads the ring, advances the read pointer, and
+holds each dispatch's completion signal. It is not the only XCD that runs the
+work.
+
+`HwQueue::xcd_fanout` is the switch. A queue that sets it is replicated onto
+every XCD at registration; a queue that does not keeps the whole grid on the CP
+it was registered against. The KFD path sets it for compute queues and leaves it
+clear for SDMA, which belongs to one engine; a test queue opts in through
+`AqlQueue(..., xcd_fanout=true)` and leaves it clear otherwise. The creation path
+is not itself the switch — either path can produce either kind of queue.
+
+Each dispatch on a fanned-out queue is split so that **XCD i runs the grid chunks
+congruent to i modulo the XCD count** — round-robin, one workgroup at a time. The
+chunk is one workgroup, except for a clustered dispatch where it is a whole
+cluster, so cluster peers stay co-resident on the XCD whose LDS they share.
+
+For those dispatches, the rank is the XCD's own index rather than its position
+relative to the queue's owner, so the workgroup-to-XCD mapping does not depend on
+which XCD the queue landed on. That matters because kernels swizzle their
+workgroup index for cache locality assuming exactly this permutation. A dispatch
+that is not fanned out makes no such claim: it runs wholly on its owner.
+
+A grid with fewer chunks than XCDs is currently left whole rather than split.
+That is a placement policy, not a correctness requirement: an entry records its
+packet kind explicitly, so an empty kernel share is distinguishable from a
+barrier and would retire correctly if it were ever produced.
+`GridSmallerThanXcdCountIsNotSplit` pins the present behavior.
+
+Replicas never read the ring and never poll a doorbell; shards arrive from the
+owning XCD through the engine's cross-thread event queue, so the handoff is safe
+when `partition_topology_by_xcds` has put each XCD on its own worker thread.
+
+### Cross-XCD completion
+
+A fanned-out dispatch retires once, after the last workgroup anywhere on the
+device. Each XCD counts its own share, flushes its own caches, then publishes the
+share to a `GridCompletion` counter shared by all shards. The owning XCD holds the
+head of its queue until that counter covers the grid, then fires the completion
+signal. Publishing releases and the owner's check acquires, so no XCD's results
+are still sitting in its caches when the signal is written.
+
+A peer shard carries no completion signal and does not report the queue idle. It
+also skips exactly the three packet-scoped plugin callbacks —
+`onAmdgpuDispatchPacketProcessed`, `onAmdgpuDispatchExecutionBegin` and
+`onAmdgpuDispatchExecutionEnd` — so one matched pair is emitted for the packet
+rather than one per share. The workgroup and wavefront callbacks are not skipped:
+every XCD still reports the work it actually ran.
 
 ### Event-Driven Dispatch
 
-The CP is event-driven. During `startup()`, it schedules a doorbell event
-for any pre-loaded packets. Each doorbell event triggers `step()`, which
-processes one dispatch packet: for each workgroup, it calls `dispatch_wf()`
-on the next CU in round-robin order. `dispatch_wf()` self-schedules the CU's
-tick via `schedule_work()`; there is no separate `activate()` call.
+The CP is event-driven, and work reaches it only through a registered queue --
+there is no submit entry point on the CP itself:
 
-- `enqueue(packet)` - pre-loads packets without triggering dispatch (used
-  by config loader and tests)
-- `submit(packet)` - thread-safe; appends packet and schedules an async
-  doorbell event via `schedule_event_now()`
+- `register_queue(HwQueue)` / `unregister_queue(...)` - attach and detach a HW
+  queue. A host-accessible queue also starts the doorbell poll thread.
+- `handle_doorbell(...)` - the doorbell event handler. It fetches newly written
+  packets from each queue's ring, then runs the dispatch loop.
+- `step()` - one engine step of that same dispatch loop, for the internal test
+  queues that are driven by `run()`/`step()` rather than by a poll thread.
+
+A producer writes an AQL packet into the ring and rings the doorbell; the poll
+thread notices the change and fires the doorbell event. For each workgroup the
+CP calls `dispatch_wf()` on the next CU in round-robin order. `dispatch_wf()`
+self-schedules the CU's tick via `schedule_work()`; there is no separate
+`activate()` call.
 
 Each CU runs its dispatched wavefronts independently. The CU is
 self-driving: `dispatch_wf()` calls `schedule_work()`, which schedules a
@@ -107,10 +170,12 @@ CUs are idle and no packets remain, the CP signals completion via
 ## Dispatch Packet Flow
 
 ```
-Config loader / Driver::submit()
-  └── cp->enqueue(packet)  or  cp->submit(packet) [+ async doorbell event]
-        └── cp->step() processes one packet:
-              for each workgroup:
+producer writes an AQL packet into the ring, then rings the doorbell
+  └── doorbell poll thread observes the change -> doorbell event
+        └── cp->handle_doorbell():
+              fetch_from_queue() reads the packet and builds a DispatchEntry
+                (a fanned-out packet also hands each peer XCD its shard here)
+              then, for each workgroup of this XCD's share:
                 cu = next CU (round-robin)
                 cu->dispatch_wf(wg_id, pc, sgprs, vgprs)
                   └── find idle slot, allocate SGPR/VGPR blocks
@@ -118,15 +183,17 @@ Config loader / Driver::submit()
                       schedule_work() -> tick event (self-driving)
 ```
 
-A `DispatchPacket` specifies:
+The in-flight record the CP builds from that packet is a `DispatchEntry`, which
+carries among other things:
 - `kernel_entry_pc` - byte address of kernel code in GPU memory
-- `workgroup_count` - number of workgroups to launch
+- `total_wgs` - workgroups to launch, narrowed to this XCD's share once sharded
 - `wfs_per_workgroup` - wavefronts per workgroup
 - `sgprs_per_wf` / `vgprs_per_wf` - register requirements (from code object)
 
 Wavefronts are distributed round-robin across CUs within the XCD. Each CU
 allocates a contiguous block in its physical SGPR and VGPR files for the
-wavefront.
+wavefront. For a fanned-out dispatch this walk covers only the XCD's own share
+of the grid; see *Queue ownership and XCD fan-out* above.
 
 ---
 
@@ -188,12 +255,12 @@ Main thread                          Simulation thread
                                      engine.run()
                                        └── epoch loop processes events
                                              │
-driver().submit(packet)  ──────────►  async event → CP doorbell fires
+write ring + ring doorbell ────────►  doorbell event → CP fetches the packet
   │                                          │
-  │                                     cp->step() dispatches wavefronts
+  │                                     handle_doorbell() dispatches wavefronts
   │                                     CU tick events execute instructions
   │                                          │
-driver().close()         ──────────►  done_ set, workers stop
+driver()->close()        ──────────►  done_ set, workers stop
   │                                        (close() calls engine()->request_exit())
   │
 sim_thread.join()  ◄─────────────────────    engine shuts down components
