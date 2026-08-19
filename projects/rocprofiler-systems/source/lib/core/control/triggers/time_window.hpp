@@ -64,6 +64,9 @@ public:
         const std::scoped_lock lk{ m_lifecycle_mutex };
         if(!m_thread.joinable()) return;
         m_clock.interrupt();
+        // join() throws if called from the thread being joined; stop() is
+        // noexcept, so that would terminate. Treat self-join as already-stopped.
+        if(m_thread.get_id() == std::this_thread::get_id()) return;
         m_thread.join();
     }
 
