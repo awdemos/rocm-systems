@@ -268,7 +268,7 @@ void run_fanout_golden_reference(uint32_t num_threads) {
   } args = {A_ADDR, B_ADDR, C_ADDR, N};
   memory->load_image(reinterpret_cast<const uint8_t *>(&args), sizeof(args), KERNARG_ADDR);
 
-  auto *cp = soc->assign_queue_cp(/*queue_ordinal=*/0);
+  auto *cp = soc->assign_queue_owner_cp(/*queue_ordinal=*/0);
   ASSERT_NE(cp, nullptr);
   test::AqlQueue queue(memory, cp, test::AqlQueue::DEFAULT_RING_ADDR,
                        test::AqlQueue::DEFAULT_RING_SIZE, test::AqlQueue::DEFAULT_READ_PTR_ADDR,

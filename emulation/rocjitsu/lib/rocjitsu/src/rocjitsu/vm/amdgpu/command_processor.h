@@ -246,6 +246,32 @@ public:
 
   size_t next_cu_index() const { return next_cu_; }
 
+  /// @brief Hardware queues registered with this CP, including fan-out replicas.
+  ///
+  /// @details Test-only. Whether a queue is present here as an owner or as a
+  /// replica is an internal placement detail, not something production code
+  /// should branch on.
+  size_t registered_queue_count_for_test() const {
+    std::lock_guard<std::recursive_mutex> lock(hw_queue_mutex_);
+    return hw_queues_.size();
+  }
+
+  /// @brief Host-accessible queues this CP polls, excluding fan-out replicas.
+  ///
+  /// @details Test-only, and the count form of polls_kfd_queues(): replication
+  /// makes every CP hold a host-accessible queue, so this is what says whether a
+  /// CP still has a ring of its own to read after another CP's queue is
+  /// destroyed. Deliberately narrower than "queues this CP owns" -- a queue
+  /// registered directly against this CP by a test is owned by it but is not
+  /// host-accessible, so it is not counted here.
+  size_t polled_kfd_queue_count_for_test() const {
+    std::lock_guard<std::recursive_mutex> lock(hw_queue_mutex_);
+    size_t polled = 0;
+    for (const auto &q : hw_queues_)
+      polled += (q.host_accessible && !q.fanout_replica) ? 1 : 0;
+    return polled;
+  }
+
   const std::vector<simdojo::Port *> &dispatch_ports() const { return dispatch_ports_; }
   const std::vector<ComputeUnitCore *> &compute_units() const { return cus_; }
 
@@ -256,9 +282,11 @@ public:
   /// @brief Test-only view of the doorbell monitor lifecycle flag.
   ///
   /// @details Exposes doorbell_running_ so a regression test can observe the
-  /// monitor stopping after the last host-accessible queue is destroyed and
-  /// restarting when a new one registers. Read under doorbell_thread_mutex_ so it
-  /// never races monitor teardown or ensure_doorbell_monitor().
+  /// monitor stopping after the last polled queue is destroyed and restarting
+  /// when a new one registers. Polled, not host-accessible: the monitor stops as
+  /// soon as this CP owns no ring of its own, which can leave host-accessible
+  /// fan-out replicas registered behind it. Read under doorbell_thread_mutex_ so
+  /// it never races monitor teardown or ensure_doorbell_monitor().
   [[nodiscard]] bool doorbell_monitor_running_for_test() {
     std::lock_guard<std::mutex> lock(doorbell_thread_mutex_);
     return doorbell_running_;
@@ -410,9 +438,26 @@ private:
     return total;
   }
 
+  /// @brief Whether any host-accessible queue is registered here, replicas included.
+  ///
+  /// @details Answers whether this CP's lifecycle is anchored by the VM-level
+  /// primary, which a fan-out replica does anchor just as its owner does.
   bool has_kfd_queues() const {
     for (const auto &q : hw_queues_)
       if (q.host_accessible)
+        return true;
+    return false;
+  }
+
+  /// @brief Whether any queue here is one whose doorbell this CP actually polls.
+  ///
+  /// @details A fan-out replica is host-accessible but is never polled: its work
+  /// arrives as dispatch shards from the XCD that owns the queue. Anything scoped
+  /// to the doorbell monitor must ask this rather than has_kfd_queues(), or a CP
+  /// left holding only replicas keeps a monitor alive for a ring it never reads.
+  bool polls_kfd_queues() const {
+    for (const auto &q : hw_queues_)
+      if (q.host_accessible && !q.fanout_replica)
         return true;
     return false;
   }
@@ -487,7 +532,7 @@ private:
   std::unordered_map<uint64_t, ClusterBarrierState> cluster_barriers_;
 
   simdojo::Event doorbell_event_{this, simdojo::EventType::TIMER_CALLBACK};
-  std::recursive_mutex hw_queue_mutex_;
+  mutable std::recursive_mutex hw_queue_mutex_;
 
   std::shared_ptr<ExecutionPluginGroup> plugin_group_ = ExecutionPluginGroup::empty_group();
 
@@ -506,7 +551,10 @@ private:
   void write_gpu_block(uint64_t va, const void *src, size_t size, uint32_t vmid);
 
   void stop_doorbell_monitor();
-  /// @brief Stop and join the monitor only when no host-accessible queue remains.
+  /// @brief Stop and join the monitor only when no polled queue remains.
+  /// @details Polled rather than host-accessible: a CP left holding only fan-out
+  /// replicas still has host-accessible queues registered, but no ring it reads,
+  /// so its monitor must retire.
   /// @details Caller MUST NOT hold hw_queue_mutex_: this helper takes that mutex
   /// to recheck the queue set, then may join a poller that needs the same mutex to
   /// finish its current scan. Serializing the recheck with startup ensures a

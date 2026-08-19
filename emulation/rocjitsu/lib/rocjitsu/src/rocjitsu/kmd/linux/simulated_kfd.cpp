@@ -2101,7 +2101,7 @@ int SimulatedKfd::create_queue_ioctl(KfdProcess &proc, void *arg) {
   // Queue IDs are process-local and start at one. Equivalent runtime queues in
   // different processes therefore share XCD resources while each process still
   // distributes additional queues across the device.
-  auto *target_cp = gpu->soc->assign_queue_cp(proc.next_queue_id_ - 1);
+  auto *target_cp = gpu->soc->assign_queue_owner_cp(proc.next_queue_id_ - 1);
   if (!target_cp)
     return -EINVAL;
 
@@ -2183,6 +2183,17 @@ int SimulatedKfd::create_queue_ioctl(KfdProcess &proc, void *arg) {
     hw.is_sdma = (args->queue_type == 1 /*KFD_IOC_QUEUE_TYPE_SDMA*/ ||
                   args->queue_type == 3 /*KFD_IOC_QUEUE_TYPE_SDMA_XGMI*/ ||
                   args->queue_type == 4 /*KFD_IOC_QUEUE_TYPE_SDMA_BY_ENG_ID*/);
+    // The topology advertises every XCD's compute units as one agent, so a
+    // compute dispatch must be able to reach all of them. Without this a
+    // single-queue application would only ever use the XCD that
+    // assign_queue_owner_cp() happened to pick.
+    //
+    // Named types only, rather than "anything that is not SDMA". SDMA queues are
+    // per-engine and are not spread, but an unrecognized queue_type is not
+    // thereby a compute queue, and device-wide replication should not be what an
+    // unsupported value silently acquires.
+    hw.xcd_fanout = (args->queue_type == 0 /*KFD_IOC_QUEUE_TYPE_COMPUTE*/ ||
+                     args->queue_type == 2 /*KFD_IOC_QUEUE_TYPE_COMPUTE_AQL*/);
     // amd_queue_t base: write_pointer_address points to write_dispatch_id.
     if (!hw.is_sdma)
       hw.queue_desc_va = args->write_pointer_address - offsetof(amd_queue_t, write_dispatch_id);

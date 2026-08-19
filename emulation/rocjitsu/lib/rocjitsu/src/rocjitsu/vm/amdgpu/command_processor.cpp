@@ -896,7 +896,11 @@ void CommandProcessor::stop_doorbell_monitor_if_idle() {
   std::lock_guard<std::mutex> thread_lock(doorbell_thread_mutex_);
   {
     std::lock_guard<std::recursive_mutex> queue_lock(hw_queue_mutex_);
-    if (has_kfd_queues())
+    // polls_kfd_queues(), not has_kfd_queues(): a fan-out replica is
+    // host-accessible but is never polled, so keying this on presence would
+    // strand a monitor on a CP whose own queue was destroyed while a replica of
+    // some other queue happened to remain.
+    if (polls_kfd_queues())
       return;
   }
   if (doorbell_thread_.joinable()) {
@@ -1019,6 +1023,11 @@ void CommandProcessor::doorbell_poll_loop(std::stop_token stop) {
       {
         std::lock_guard<std::recursive_mutex> lock(hw_queue_mutex_);
         for (size_t i = 0; i < hw_queues_.size(); ++i) {
+          // A replica does not own the queue, so it must not report it idle: its
+          // shards drain before the owner's and the same KFD queue would otherwise
+          // raise this from several CPs at once.
+          if (hw_queues_[i].fanout_replica)
+            continue;
           if (new_queue_states_[i].entries.empty() && hw_queues_[i].process_id != 0)
             idle_pids.push_back(hw_queues_[i].process_id);
         }
@@ -1968,11 +1977,12 @@ void CommandProcessor::process_aql_packet(const hsa_kernel_dispatch_packet_t &pk
 }
 
 void CommandProcessor::arm_stall_recheck(simdojo::Tick now) {
-  // A doorbell poll thread runs only for host-accessible (KFD) queues; it re-checks
+  // A doorbell poll thread runs only for queues this CP polls; it re-checks
   // stall_pending_ at its 100us cadence, so the engine can idle instead of spinning.
   // Internal test queues have no poll thread — they are driven by engine->run()/
-  // step() — so there the re-check must be kept alive on the main event queue.
-  if (has_kfd_queues())
+  // step() — and neither do fan-out replicas, so in both cases the re-check must be
+  // kept alive on the main event queue instead.
+  if (polls_kfd_queues())
     stall_pending_.store(true, std::memory_order_release);
   else
     schedule_event(&doorbell_event_, now + 1);
