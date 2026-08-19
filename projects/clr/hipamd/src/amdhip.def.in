@@ -561,4 +561,5 @@ hipExecutionCtxRecordEvent
 hipExecutionCtxSynchronize
 hipExecutionCtxWaitEvent
 hipMemGetDefaultMemPool
+hipModuleEnumerateFunctions
 @HSA_EXPORTS@

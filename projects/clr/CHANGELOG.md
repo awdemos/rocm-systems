@@ -8,6 +8,8 @@ Full documentation for HIP is available at [rocm.docs.amd.com](https://rocm.docs
 * New HIP APIs
     - Device Management: support for querying a device identifier.
       * `hipDeviceGetLuid` returns the locally unique identifier (LUID) and device node mask for a device
+    - Module Management: support for enumerating functions within a module.
+      * `hipModuleEnumerateFunctions` returns the function handles within a module
 
 ## HIP 10.0.0 for ROCm 10.0.0
 
