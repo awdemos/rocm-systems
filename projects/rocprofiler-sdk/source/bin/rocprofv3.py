@@ -90,12 +90,6 @@ def warning(msg, *args):
     sys.stderr.flush()
 
 
-def info(msg, *args):
-    msg = patch_message(msg, *args)
-    sys.stderr.write(f"[rocprofv3] {msg}\n")
-    sys.stderr.flush()
-
-
 def format_help(formatter, w=120, h=40):
     """Return a wider HelpFormatter, if possible."""
     try:
@@ -335,11 +329,6 @@ def check_att_capability(args, att_lib_name="librocprof-trace-decoder.so"):
         for root, dirs, files in os.walk(path, topdown=True):
             for itr in files:
                 if att_lib_name in itr:
-                    info(
-                        "rocprof-trace-decoder library '{}' selected from '{}'".format(
-                            itr, root
-                        )
-                    )
                     args.att_library_path = resolve_library_path(
                         root, args, is_sdk_lib=False
                     )
