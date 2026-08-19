@@ -100,15 +100,26 @@ which XCD the queue landed on. That matters because kernels swizzle their
 workgroup index for cache locality assuming exactly this permutation. A dispatch
 that is not fanned out makes no such claim: it runs wholly on its owner.
 
-A grid with fewer chunks than XCDs is currently left whole rather than split.
-That is a placement policy, not a correctness requirement: an entry records its
-packet kind explicitly, so an empty kernel share is distinguishable from a
-barrier and would retire correctly if it were ever produced.
-`GridSmallerThanXcdCountIsNotSplit` pins the present behavior.
+A grid with fewer chunks than XCDs is still split; the XCDs that get nothing take
+an empty share. Those empty shares are what keep every XCD's copy of the queue in
+step, because `barrier_satisfied()` reads ordering from the entries sitting ahead
+of a barrier'd packet, and an XCD that never heard about a packet would start the
+next one early. An empty share is still a *kernel* dispatch -- `is_non_kernel()`
+is false for it, since the packet kind is recorded rather than inferred from the
+workgroup count -- and it completes immediately because its `total_wgs` is zero.
+Like every other shard it is then held at the head until the grid retires.
+
+Because a replica's entry list is a subsequence of the owner's -- barrier,
+barrier-value and PM4-IB packets live only on the owner -- every packet type that
+is *not* replicated must either stall the fetch while it is unsatisfied or be
+enqueued already complete. Both hold today; a future packet type that is neither
+would silently let a replica run ahead.
 
 Replicas never read the ring and never poll a doorbell; shards arrive from the
 owning XCD through the engine's cross-thread event queue, so the handoff is safe
-when `partition_topology_by_xcds` has put each XCD on its own worker thread.
+when `partition_topology_by_xcds` has put each XCD on its own worker thread. A
+packet's acquire fence travels with the shard and each XCD applies it to its own
+caches on its own thread, since one XCD may not touch another's.
 
 ### Cross-XCD completion
 
@@ -119,12 +130,39 @@ head of its queue until that counter covers the grid, then fires the completion
 signal. Publishing releases and the owner's check acquires, so no XCD's results
 are still sitting in its caches when the signal is written.
 
+An XCD parked on a share it has already finished re-arms a re-check on its own
+event queue for as long as the grid is still outstanding. The XCD that retires
+the grid does wake every XCD, but that wake travels the engine's cross-thread
+async queue, which neither contributes to LBTS nor counts as outstanding work
+when the engine tests for termination: with one partition per XCD, every
+partition can go quiescent in the same epoch the wake is deposited, and the run
+ends before the next epoch delivers it. The re-check keeps the waiting
+partition's next-event time finite, which leaves the wake an optimization rather
+than the only thing standing between the grid retiring and the signal being
+written.
+
 A peer shard carries no completion signal and does not report the queue idle. It
 also skips exactly the three packet-scoped plugin callbacks —
 `onAmdgpuDispatchPacketProcessed`, `onAmdgpuDispatchExecutionBegin` and
 `onAmdgpuDispatchExecutionEnd` — so one matched pair is emitted for the packet
 rather than one per share. The workgroup and wavefront callbacks are not skipped:
 every XCD still reports the work it actually ran.
+
+Destroying a fan-out queue discards any share that has not yet been published:
+the teardown runs on the caller's thread and so cannot flush a partition's compute
+units, and publishing without that write-back would let the owner signal with an
+XCD's results still cached. Dropping them is sound **only because a fan-out queue
+is always destroyed on every XCD at once** — the KFD paths sweep every command
+processor and an owner cascades to its replicas — so no XCD is ever left holding a
+grid that can no longer retire. A future change that tears one XCD's copy down
+alone would strand the owner.
+
+A shard still sitting in a peer's inbox when its replica is destroyed is dropped
+for the same reason and on the same argument. It has not run and its XCD's caches
+have not been written back, so crediting it would be worse than losing it: the
+owner would retire the grid and fire the completion signal for workgroups that
+never executed. KFD teardown is what reaches this window, since it removes
+replicas in XCD order while a later owner is still registered.
 
 ### Event-Driven Dispatch
 

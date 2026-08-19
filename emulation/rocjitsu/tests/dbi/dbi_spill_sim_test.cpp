@@ -148,6 +148,8 @@ public:
   }
 
   amdgpu::GpuMemory *mem() { return mem_; }
+
+  uint32_t queue_seq_ = 0;
   amdgpu::CommandProcessor *cp() { return soc_->xcd(0)->command_processor(); }
   amdgpu::ComputeUnitCore *cu() { return soc_->xcd(0)->shader_engine(0)->compute_unit(0); }
 
@@ -176,7 +178,15 @@ public:
   std::vector<uint32_t> run_and_read_vgpr(const std::vector<uint32_t> &code, uint32_t private_bytes,
                                           uint32_t reg) {
     const uint64_t ko = write_kernel(0x1000, code, private_bytes);
-    test::AqlQueue queue(mem_, cp());
+    // A distinct queue id per run: callers reuse one DbiSim for several
+    // dispatches, and each AqlQueue leaves its registration behind on the CP.
+    // Two live queues sharing an id on one CP are rejected, since fan-out routes
+    // shards back by (queue_id, process_id).
+    test::AqlQueue queue(mem_, cp(), test::AqlQueue::DEFAULT_RING_ADDR,
+                         test::AqlQueue::DEFAULT_RING_SIZE, test::AqlQueue::DEFAULT_READ_PTR_ADDR,
+                         test::AqlQueue::DEFAULT_WRITE_PTR_ADDR,
+                         test::AqlQueue::DEFAULT_DOORBELL_ADDR, /*xcd_fanout=*/false,
+                         /*queue_id=*/++queue_seq_);
     queue.dispatch(ko, /*grid_size_x=*/wave_size_, /*workgroup_size_x=*/wave_size_);
     engine_->run();
 

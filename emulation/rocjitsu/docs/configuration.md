@@ -102,9 +102,10 @@ without the flag keeps its whole grid on its owning XCD and leaves the other
 partitions idle no matter how `num_threads` is set.
 
 Setting the flag is not a guarantee that every partition gets work. A grid with
-fewer workgroups than the SoC has XCDs stays whole on the owner, and fan-out
-reaches only the XCDs of the SoC that owns the queue -- so in the two-GPU example
-above, one dispatch occupies at most the partitions covering its own GPU.
+fewer workgroups than the SoC has XCDs is still split, but the XCDs past the end
+of it take an empty share and run nothing. Fan-out also reaches only the XCDs of
+the SoC that owns the queue -- so in the two-GPU example above, one dispatch
+occupies at most the partitions covering its own GPU.
 
 ### Topology
 

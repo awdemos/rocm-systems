@@ -23,8 +23,6 @@
 namespace rocjitsu {
 namespace amdgpu {
 
-class CommandProcessor;
-
 struct WorkgroupCoord {
   uint32_t x = 0;
   uint32_t y = 0;
@@ -73,9 +71,28 @@ struct GridCompletion {
   std::atomic<uint32_t> completed_wgs{0};
   /// Workgroups in the whole grid.
   uint32_t grid_wgs = 0;
+  /// Cleared by the first XCD to place a workgroup, so the dispatch reports that
+  /// it began exactly once however the grid is split. An XCD whose share is empty
+  /// never places anything, so this cannot be tied to the XCD that read the packet.
+  std::atomic_flag execution_begun{};
 
-  void publish_share(uint32_t wgs) { completed_wgs.fetch_add(wgs, std::memory_order_release); }
-  bool grid_retired() const { return completed_wgs.load(std::memory_order_acquire) >= grid_wgs; }
+  /// @brief Add one XCD's retired workgroups to the grid total.
+  /// @returns True for the single caller whose contribution completed the grid, so
+  /// the follow-on wake happens exactly once rather than once per racing XCD.
+  [[nodiscard]] bool publish_share(uint32_t wgs) {
+    uint32_t before = completed_wgs.fetch_add(wgs, std::memory_order_acq_rel);
+    return before < grid_wgs && before + wgs >= grid_wgs;
+  }
+
+  /// @returns True once every XCD has published its share.
+  [[nodiscard]] bool grid_retired() const {
+    return completed_wgs.load(std::memory_order_acquire) >= grid_wgs;
+  }
+
+  /// @returns True for the first caller only.
+  [[nodiscard]] bool claim_execution_begin() {
+    return !execution_begun.test_and_set(std::memory_order_relaxed);
+  }
 };
 
 /// @brief Per-dispatch tracking entry created by the AQL Packet Processor.
@@ -159,24 +176,42 @@ struct DispatchEntry {
   bool host_signal = false;
   bool barrier_bit = false;
   bool execution_begun = false;
+  /// The packet carried an acquire fence of at least agent scope. Recorded on the
+  /// entry so that every XCD running part of the grid can invalidate its own caches
+  /// on its own thread, not just the one that read the packet.
+  bool acquire_invalidate = false;
 
   /// Grid-wide retirement state, shared by every shard of a fanned-out dispatch.
   /// Null when this entry owns the whole grid by itself.
   std::shared_ptr<GridCompletion> grid_completion{};
-  /// The command processor holding the dispatch's completion signal. Set on the
-  /// shards handed to peer XCDs so a peer can wake the owner when its share
-  /// retires; null on the owner's own shard.
-  CommandProcessor *fanout_owner = nullptr;
+  /// True on the shards handed to peer XCDs. The shard left on the XCD that read
+  /// the packet keeps the completion signal and the dispatch-level callbacks.
+  bool fanout_peer = false;
   /// Set once this shard has published its retired workgroups to grid_completion,
   /// so a repeated drain cannot double-count them.
   bool grid_share_published = false;
 
-  /// @returns True when this entry is a peer XCD's share of a fanned-out dispatch,
-  /// rather than the share held by the XCD that owns the completion signal.
-  bool is_fanout_peer() const { return fanout_owner != nullptr; }
-
   bool fully_dispatched() const { return dispatched_wgs >= total_wgs; }
   bool fully_completed() const { return completed_wgs >= total_wgs; }
+
+  /// @returns Workgroups in the whole grid, as opposed to total_wgs which after
+  /// a fan-out counts only this XCD's share. Anything sized or indexed against the
+  /// grid -- scratch backing, whose per-wave offset comes from the grid-wide
+  /// workgroup id -- must use this and not total_wgs.
+  [[nodiscard]] uint32_t grid_total_wgs() const {
+    return grid_completion ? grid_completion->grid_wgs : total_wgs;
+  }
+
+  /// @returns True when the dispatch has finished everywhere, not merely on this
+  /// XCD. The AQL barrier bit means "no later packet starts until every preceding
+  /// packet has completed", which for a fanned-out dispatch is a property of the
+  /// whole grid: this XCD finishing its share says nothing about the others.
+  [[nodiscard]] bool grid_fully_completed() const {
+    if (grid_completion)
+      return grid_completion->grid_retired();
+    return fully_completed();
+  }
+
   /// @returns True for packets that run no shader at all (barrier, barrier-value,
   /// PM4 IB). Deliberately a stored kind rather than `total_wgs == 0`: a kernel
   /// dispatch split across XCDs can legitimately leave one XCD an empty share,
@@ -261,7 +296,9 @@ struct DispatchEntry {
   }
 
   /// @brief Chunk the grid walk advances by: a cluster, else a single workgroup.
-  uint32_t dispatch_chunk_wgs() const { return has_workgroup_clusters() ? cluster_size() : 1u; }
+  [[nodiscard]] uint32_t dispatch_chunk_wgs() const {
+    return has_workgroup_clusters() ? cluster_size() : 1u;
+  }
 
   /// @brief Grid-wide chunk ordinal for this entry's @p shard_chunk_index -th chunk.
   ///
@@ -273,7 +310,7 @@ struct DispatchEntry {
   /// workgroup that does not exist. Bound it here, where the share size is known.
   /// @param shard_chunk_index Zero-based chunk index within this entry's share.
   /// @returns The chunk's ordinal in the whole grid.
-  uint32_t chunk_ordinal_for(uint32_t shard_chunk_index) const {
+  [[nodiscard]] uint32_t chunk_ordinal_for(uint32_t shard_chunk_index) const {
     assert(static_cast<uint64_t>(shard_chunk_index) * dispatch_chunk_wgs() < total_wgs &&
            "chunk index is shard-local and must lie within this entry's share");
     return shard.nth_owned_chunk(shard_chunk_index);
