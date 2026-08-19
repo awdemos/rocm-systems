@@ -189,5 +189,6 @@ ncclResult_t ncclHierCeAlltoAll(struct ncclComm* comm, struct ncclKernelPlan* pl
 // Requires comm->ceColl.ceARTmpBuf != NULL (i.e. ncclCeInit has run).
 ncclResult_t ncclCeAllReduce(struct ncclComm* comm, const void* sendbuff, void* recvbuff, size_t count,
                              ncclDataType_t datatype, ncclRedOp_t op, cudaStream_t stream,
-                             struct ncclDevrWindow* recvWin = nullptr);
+                             struct ncclDevrWindow* recvWin = nullptr,
+                             struct ncclCeCollArgs* profilerArgs = nullptr);
 #endif /* NCCL_CE_COLL_H_ */
