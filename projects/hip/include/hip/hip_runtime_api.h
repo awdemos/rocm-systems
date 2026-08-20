@@ -657,11 +657,17 @@ enum hipGPUDirectRDMAWritesOrdering {
 #include <hip/driver_types.h>
 #include <hip/texture_types.h>
 #include <hip/surface_types.h>
-#if defined(_MSC_VER)
+
+#if HIP_FORCE_API_VERSION == 0
+// If we need API version 0, it means nothing is deprecated. Application should
+// never do that, unless it needs to support all released version of HIP runtime.
+#define HIP_DEPRECATED(x)
+#elif defined(_MSC_VER)
 #define HIP_DEPRECATED(msg) __declspec(deprecated(msg))
 #else  // !defined(_MSC_VER)
 #define HIP_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #endif  // !defined(_MSC_VER)
+
 #define HIP_DEPRECATED_MSG                                                                         \
   "This API is marked as deprecated and might not be supported in future releases. For more "      \
   "details please refer "                                                                          \

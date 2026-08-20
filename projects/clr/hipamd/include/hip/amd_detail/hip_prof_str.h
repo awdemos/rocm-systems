@@ -16,9 +16,6 @@
 #include <hip/hip_deprecated.h>
 #include "amd_hip_gl_interop.h"
 
-#define HIP_API_ID_CONCAT_HELPER(a,b) a##b
-#define HIP_API_ID_CONCAT(a,b) HIP_API_ID_CONCAT_HELPER(a,b)
-
 // HIP API callbacks ID enumeration
 enum hip_api_id_t {
   HIP_API_ID_NONE = 0,
@@ -508,10 +505,9 @@ enum hip_api_id_t {
   HIP_API_ID_hipDrvMemDiscardAndPrefetchBatchAsync = 483,
   HIP_API_ID_hipMemGetDefaultMemPool = 484,
   HIP_API_ID_hipDeviceGetLuid = 485,
-  HIP_API_ID_LAST = 485,
+  HIP_API_ID_hipGetDeviceProperties = 486,
+  HIP_API_ID_LAST = 486,
 
-  // HIP_API_ID_hipChooseDevice = HIP_API_ID_CONCAT(HIP_API_ID_,hipChooseDevice),
-  // HIP_API_ID_hipGetDeviceProperties = HIP_API_ID_CONCAT(HIP_API_ID_,hipGetDeviceProperties),
 
   HIP_API_ID_hipBindTexture = HIP_API_ID_NONE,
   HIP_API_ID_hipBindTexture2D = HIP_API_ID_NONE,
@@ -539,9 +535,6 @@ enum hip_api_id_t {
   HIP_API_ID_hipTexRefSetMipmapFilterMode = HIP_API_ID_NONE,
   HIP_API_ID_hipUnbindTexture = HIP_API_ID_NONE,
 };
-
-#undef HIP_API_ID_CONCAT_HELPER
-#undef HIP_API_ID_CONCAT
 
 // Return the HIP API string for a given callback ID
 static inline const char* hip_api_name(const uint32_t id) {
@@ -593,6 +586,7 @@ static inline const char* hip_api_name(const uint32_t id) {
     case HIP_API_ID_hipDeviceGetExecutionCtx: return "hipDeviceGetExecutionCtx";
     case HIP_API_ID_hipDeviceGetGraphMemAttribute: return "hipDeviceGetGraphMemAttribute";
     case HIP_API_ID_hipDeviceGetLimit: return "hipDeviceGetLimit";
+    case HIP_API_ID_hipDeviceGetLuid: return "hipDeviceGetLuid";
     case HIP_API_ID_hipDeviceGetMemPool: return "hipDeviceGetMemPool";
     case HIP_API_ID_hipDeviceGetName: return "hipDeviceGetName";
     case HIP_API_ID_hipDeviceGetP2PAttribute: return "hipDeviceGetP2PAttribute";
@@ -600,7 +594,6 @@ static inline const char* hip_api_name(const uint32_t id) {
     case HIP_API_ID_hipDeviceGetSharedMemConfig: return "hipDeviceGetSharedMemConfig";
     case HIP_API_ID_hipDeviceGetStreamPriorityRange: return "hipDeviceGetStreamPriorityRange";
     case HIP_API_ID_hipDeviceGetUuid: return "hipDeviceGetUuid";
-    case HIP_API_ID_hipDeviceGetLuid: return "hipDeviceGetLuid";
     case HIP_API_ID_hipDeviceGraphMemTrim: return "hipDeviceGraphMemTrim";
     case HIP_API_ID_hipDevicePrimaryCtxGetState: return "hipDevicePrimaryCtxGetState";
     case HIP_API_ID_hipDevicePrimaryCtxRelease: return "hipDevicePrimaryCtxRelease";
@@ -674,6 +667,7 @@ static inline const char* hip_api_name(const uint32_t id) {
     case HIP_API_ID_hipGetDevice: return "hipGetDevice";
     case HIP_API_ID_hipGetDeviceCount: return "hipGetDeviceCount";
     case HIP_API_ID_hipGetDeviceFlags: return "hipGetDeviceFlags";
+    case HIP_API_ID_hipGetDeviceProperties: return "hipGetDeviceProperties";
     case HIP_API_ID_hipGetDevicePropertiesR0000: return "hipGetDevicePropertiesR0000";
     case HIP_API_ID_hipGetDevicePropertiesR0600: return "hipGetDevicePropertiesR0600";
     case HIP_API_ID_hipGetDriverEntryPoint: return "hipGetDriverEntryPoint";
@@ -1072,6 +1066,7 @@ static inline uint32_t hipApiIdByName(const char* name) {
   if (strcmp("hipDeviceGetExecutionCtx", name) == 0) return HIP_API_ID_hipDeviceGetExecutionCtx;
   if (strcmp("hipDeviceGetGraphMemAttribute", name) == 0) return HIP_API_ID_hipDeviceGetGraphMemAttribute;
   if (strcmp("hipDeviceGetLimit", name) == 0) return HIP_API_ID_hipDeviceGetLimit;
+  if (strcmp("hipDeviceGetLuid", name) == 0) return HIP_API_ID_hipDeviceGetLuid;
   if (strcmp("hipDeviceGetMemPool", name) == 0) return HIP_API_ID_hipDeviceGetMemPool;
   if (strcmp("hipDeviceGetName", name) == 0) return HIP_API_ID_hipDeviceGetName;
   if (strcmp("hipDeviceGetP2PAttribute", name) == 0) return HIP_API_ID_hipDeviceGetP2PAttribute;
@@ -1079,7 +1074,6 @@ static inline uint32_t hipApiIdByName(const char* name) {
   if (strcmp("hipDeviceGetSharedMemConfig", name) == 0) return HIP_API_ID_hipDeviceGetSharedMemConfig;
   if (strcmp("hipDeviceGetStreamPriorityRange", name) == 0) return HIP_API_ID_hipDeviceGetStreamPriorityRange;
   if (strcmp("hipDeviceGetUuid", name) == 0) return HIP_API_ID_hipDeviceGetUuid;
-  if (strcmp("hipDeviceGetLuid", name) == 0) return HIP_API_ID_hipDeviceGetLuid;
   if (strcmp("hipDeviceGraphMemTrim", name) == 0) return HIP_API_ID_hipDeviceGraphMemTrim;
   if (strcmp("hipDevicePrimaryCtxGetState", name) == 0) return HIP_API_ID_hipDevicePrimaryCtxGetState;
   if (strcmp("hipDevicePrimaryCtxRelease", name) == 0) return HIP_API_ID_hipDevicePrimaryCtxRelease;
@@ -1153,6 +1147,7 @@ static inline uint32_t hipApiIdByName(const char* name) {
   if (strcmp("hipGetDevice", name) == 0) return HIP_API_ID_hipGetDevice;
   if (strcmp("hipGetDeviceCount", name) == 0) return HIP_API_ID_hipGetDeviceCount;
   if (strcmp("hipGetDeviceFlags", name) == 0) return HIP_API_ID_hipGetDeviceFlags;
+  if (strcmp("hipGetDeviceProperties", name) == 0) return HIP_API_ID_hipGetDeviceProperties;
   if (strcmp("hipGetDevicePropertiesR0000", name) == 0) return HIP_API_ID_hipGetDevicePropertiesR0000;
   if (strcmp("hipGetDevicePropertiesR0600", name) == 0) return HIP_API_ID_hipGetDevicePropertiesR0600;
   if (strcmp("hipGetDriverEntryPoint", name) == 0) return HIP_API_ID_hipGetDriverEntryPoint;
@@ -1744,6 +1739,13 @@ typedef struct hip_api_data_s {
       enum hipLimit_t limit;
     } hipDeviceGetLimit;
     struct {
+      char* luid;
+      char luid__val;
+      unsigned int* deviceNodeMask;
+      unsigned int deviceNodeMask__val;
+      hipDevice_t device;
+    } hipDeviceGetLuid;
+    struct {
       hipMemPool_t* mem_pool;
       hipMemPool_t mem_pool__val;
       int device;
@@ -1782,13 +1784,6 @@ typedef struct hip_api_data_s {
       hipUUID uuid__val;
       hipDevice_t device;
     } hipDeviceGetUuid;
-    struct {
-      char* luid;
-      char luid__val;
-      unsigned int* deviceNodeMask;
-      unsigned int deviceNodeMask__val;
-      hipDevice_t device;
-    } hipDeviceGetLuid;
     struct {
       int device;
     } hipDeviceGraphMemTrim;
@@ -2167,6 +2162,11 @@ typedef struct hip_api_data_s {
       unsigned int* flags;
       unsigned int flags__val;
     } hipGetDeviceFlags;
+    struct {
+      hipDeviceProp_tR0000* prop;
+      hipDeviceProp_tR0000 prop__val;
+      int deviceId;
+    } hipGetDeviceProperties;
     struct {
       hipDeviceProp_tR0000* prop;
       hipDeviceProp_tR0000 prop__val;
@@ -4649,6 +4649,12 @@ typedef struct hip_api_data_s {
   cb_data.args.hipDeviceGetLimit.pValue = (size_t*)pValue; \
   cb_data.args.hipDeviceGetLimit.limit = (hipLimit_t)limit; \
 };
+// hipDeviceGetLuid[('char*', 'luid'), ('unsigned int*', 'deviceNodeMask'), ('hipDevice_t', 'device')]
+#define INIT_hipDeviceGetLuid_CB_ARGS_DATA(cb_data) { \
+  cb_data.args.hipDeviceGetLuid.luid = (char*)luid; \
+  cb_data.args.hipDeviceGetLuid.deviceNodeMask = (unsigned int*)deviceNodeMask; \
+  cb_data.args.hipDeviceGetLuid.device = (hipDevice_t)device; \
+};
 // hipDeviceGetMemPool[('hipMemPool_t*', 'mem_pool'), ('int', 'device')]
 #define INIT_hipDeviceGetMemPool_CB_ARGS_DATA(cb_data) { \
   cb_data.args.hipDeviceGetMemPool.mem_pool = (hipMemPool_t*)mem_pool; \
@@ -4686,12 +4692,6 @@ typedef struct hip_api_data_s {
 #define INIT_hipDeviceGetUuid_CB_ARGS_DATA(cb_data) { \
   cb_data.args.hipDeviceGetUuid.uuid = (hipUUID*)uuid; \
   cb_data.args.hipDeviceGetUuid.device = (hipDevice_t)device; \
-};
-// hipDeviceGetLuid[('char*', 'luid'), ('unsigned int*', 'deviceNodeMask'), ('hipDevice_t', 'device')]
-#define INIT_hipDeviceGetLuid_CB_ARGS_DATA(cb_data) { \
-  cb_data.args.hipDeviceGetLuid.luid = (char*)luid; \
-  cb_data.args.hipDeviceGetLuid.deviceNodeMask = (unsigned int*)deviceNodeMask; \
-  cb_data.args.hipDeviceGetLuid.device = (hipDevice_t)device; \
 };
 // hipDeviceGraphMemTrim[('int', 'device')]
 #define INIT_hipDeviceGraphMemTrim_CB_ARGS_DATA(cb_data) { \
@@ -5093,6 +5093,9 @@ typedef struct hip_api_data_s {
 // hipGetDeviceFlags[('unsigned int*', 'flags')]
 #define INIT_hipGetDeviceFlags_CB_ARGS_DATA(cb_data) { \
   cb_data.args.hipGetDeviceFlags.flags = (unsigned int*)flags; \
+};
+// hipGetDeviceProperties[('hipDeviceProp_tR0000*', 'prop'), ('int', 'deviceId')]
+#define INIT_hipGetDeviceProperties_CB_ARGS_DATA(cb_data) { \
 };
 // hipGetDevicePropertiesR0000[('hipDeviceProp_tR0000*', 'prop'), ('int', 'device')]
 #define INIT_hipGetDevicePropertiesR0000_CB_ARGS_DATA(cb_data) { \
@@ -7565,6 +7568,11 @@ static inline void hipApiArgsInit(hip_api_id_t id, hip_api_data_t* data) {
     case HIP_API_ID_hipDeviceGetLimit:
       if (data->args.hipDeviceGetLimit.pValue) data->args.hipDeviceGetLimit.pValue__val = *(data->args.hipDeviceGetLimit.pValue);
       break;
+// hipDeviceGetLuid[('char*', 'luid'), ('unsigned int*', 'deviceNodeMask'), ('hipDevice_t', 'device')]
+    case HIP_API_ID_hipDeviceGetLuid:
+      data->args.hipDeviceGetLuid.luid = (data->args.hipDeviceGetLuid.luid) ? strdup(data->args.hipDeviceGetLuid.luid) : NULL;
+      if (data->args.hipDeviceGetLuid.deviceNodeMask) data->args.hipDeviceGetLuid.deviceNodeMask__val = *(data->args.hipDeviceGetLuid.deviceNodeMask);
+      break;
 // hipDeviceGetMemPool[('hipMemPool_t*', 'mem_pool'), ('int', 'device')]
     case HIP_API_ID_hipDeviceGetMemPool:
       if (data->args.hipDeviceGetMemPool.mem_pool) data->args.hipDeviceGetMemPool.mem_pool__val = *(data->args.hipDeviceGetMemPool.mem_pool);
@@ -7593,11 +7601,6 @@ static inline void hipApiArgsInit(hip_api_id_t id, hip_api_data_t* data) {
 // hipDeviceGetUuid[('hipUUID*', 'uuid'), ('hipDevice_t', 'device')]
     case HIP_API_ID_hipDeviceGetUuid:
       if (data->args.hipDeviceGetUuid.uuid) data->args.hipDeviceGetUuid.uuid__val = *(data->args.hipDeviceGetUuid.uuid);
-      break;
-// hipDeviceGetLuid[('char*', 'luid'), ('unsigned int*', 'deviceNodeMask'), ('hipDevice_t', 'device')]
-    case HIP_API_ID_hipDeviceGetLuid:
-      if (data->args.hipDeviceGetLuid.luid) data->args.hipDeviceGetLuid.luid__val = *(data->args.hipDeviceGetLuid.luid);
-      if (data->args.hipDeviceGetLuid.deviceNodeMask) data->args.hipDeviceGetLuid.deviceNodeMask__val = *(data->args.hipDeviceGetLuid.deviceNodeMask);
       break;
 // hipDeviceGraphMemTrim[('int', 'device')]
     case HIP_API_ID_hipDeviceGraphMemTrim:
@@ -7877,6 +7880,10 @@ static inline void hipApiArgsInit(hip_api_id_t id, hip_api_data_t* data) {
 // hipGetDeviceFlags[('unsigned int*', 'flags')]
     case HIP_API_ID_hipGetDeviceFlags:
       if (data->args.hipGetDeviceFlags.flags) data->args.hipGetDeviceFlags.flags__val = *(data->args.hipGetDeviceFlags.flags);
+      break;
+// hipGetDeviceProperties[('hipDeviceProp_tR0000*', 'prop'), ('int', 'deviceId')]
+    case HIP_API_ID_hipGetDeviceProperties:
+      if (data->args.hipGetDeviceProperties.prop) data->args.hipGetDeviceProperties.prop__val = *(data->args.hipGetDeviceProperties.prop);
       break;
 // hipGetDevicePropertiesR0000[('hipDeviceProp_tR0000*', 'prop'), ('int', 'device')]
     case HIP_API_ID_hipGetDevicePropertiesR0000:
@@ -9612,6 +9619,15 @@ static inline const char* hipApiString(hip_api_id_t id, const hip_api_data_t* da
       oss << ", limit="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLimit.limit);
       oss << ")";
     break;
+    case HIP_API_ID_hipDeviceGetLuid:
+      oss << "hipDeviceGetLuid(";
+      if (data->args.hipDeviceGetLuid.luid == NULL) oss << "luid=NULL";
+      else { oss << "luid="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.luid__val); }
+      if (data->args.hipDeviceGetLuid.deviceNodeMask == NULL) oss << ", deviceNodeMask=NULL";
+      else { oss << ", deviceNodeMask="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.deviceNodeMask__val); }
+      oss << ", device="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.device);
+      oss << ")";
+    break;
     case HIP_API_ID_hipDeviceGetMemPool:
       oss << "hipDeviceGetMemPool(";
       if (data->args.hipDeviceGetMemPool.mem_pool == NULL) oss << "mem_pool=NULL";
@@ -9663,15 +9679,6 @@ static inline const char* hipApiString(hip_api_id_t id, const hip_api_data_t* da
       if (data->args.hipDeviceGetUuid.uuid == NULL) oss << "uuid=NULL";
       else { oss << "uuid="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetUuid.uuid__val); }
       oss << ", device="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetUuid.device);
-      oss << ")";
-    break;
-    case HIP_API_ID_hipDeviceGetLuid:
-      oss << "hipDeviceGetLuid(";
-      if (data->args.hipDeviceGetLuid.luid == NULL) oss << "luid=NULL";
-      else { oss << "luid="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.luid__val); }
-      if (data->args.hipDeviceGetLuid.deviceNodeMask == NULL) oss << ", deviceNodeMask=NULL";
-      else { oss << ", deviceNodeMask="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.deviceNodeMask__val); }
-      oss << ", device="; roctracer::hip_support::detail::operator<<(oss, data->args.hipDeviceGetLuid.device);
       oss << ")";
     break;
     case HIP_API_ID_hipDeviceGraphMemTrim:
@@ -10206,6 +10213,13 @@ static inline const char* hipApiString(hip_api_id_t id, const hip_api_data_t* da
       oss << "hipGetDeviceFlags(";
       if (data->args.hipGetDeviceFlags.flags == NULL) oss << "flags=NULL";
       else { oss << "flags="; roctracer::hip_support::detail::operator<<(oss, data->args.hipGetDeviceFlags.flags__val); }
+      oss << ")";
+    break;
+    case HIP_API_ID_hipGetDeviceProperties:
+      oss << "hipGetDeviceProperties(";
+      if (data->args.hipGetDeviceProperties.prop == NULL) oss << "prop=NULL";
+      else { oss << "prop="; roctracer::hip_support::detail::operator<<(oss, data->args.hipGetDeviceProperties.prop__val); }
+      oss << ", deviceId="; roctracer::hip_support::detail::operator<<(oss, data->args.hipGetDeviceProperties.deviceId);
       oss << ")";
     break;
     case HIP_API_ID_hipGetDevicePropertiesR0000:
