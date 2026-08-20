@@ -106,10 +106,10 @@ hipError_t hipDeviceGetP2PAttribute(int* value, hipDeviceP2PAttr attr, int srcDe
       break;
     }
     case hipDevP2PAttrHipArrayAccessSupported: {
-      hipDeviceProp_tR0600 srcDeviceProp;
-      hipDeviceProp_tR0600 dstDeviceProp;
-      HIP_RETURN_ONFAIL(hipGetDevicePropertiesR0600(&srcDeviceProp, srcDevice));
-      HIP_RETURN_ONFAIL(hipGetDevicePropertiesR0600(&dstDeviceProp, dstDevice));
+      hipDeviceProp_t srcDeviceProp;
+      hipDeviceProp_t dstDeviceProp;
+      HIP_RETURN_ONFAIL(hipGetDeviceProperties(&srcDeviceProp, srcDevice));
+      HIP_RETURN_ONFAIL(hipGetDeviceProperties(&dstDeviceProp, dstDevice));
 
       // Linear layout access is supported if P2P is enabled
       // Opaque Images are supported only on homogeneous systems

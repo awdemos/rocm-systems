@@ -4,6 +4,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+// This is the entry point of all APIs we need to support, so set the API level
+// to 0. We should not rely on versioned functions/struct in this file, as they
+// are declared as the OLDEST version.
+#define HIP_FORCE_API_VERSION 0
+
 #include <hip/amd_detail/hip_api_trace.hpp>
 #include "hip_internal.hpp"
 #include "utils/flags.hpp"
@@ -3357,4 +3362,15 @@ hipError_t hipMemGetDefaultMemPool(hipMemPool_t* memPool, hipMemLocation* locati
   TRY;
   return hip::GetHipDispatchTable()->hipMemGetDefaultMemPool_fn(memPool, location, type);
   CATCH;
+}
+
+// These symbols are no longer provided as APIs, but they are supported as
+// part of the ABI. If application insist on using them, they need to call the
+// R0000 version.
+extern "C" hipError_t hipGetDeviceProperties(hipDeviceProp_tR0000* props, hipDevice_t device) {
+  return hipGetDevicePropertiesR0000(props, device);
+}
+
+extern "C" hipError_t hipChooseDevice(int* device, const hipDeviceProp_tR0000* properties) {
+  return hipChooseDeviceR0000(device, properties);
 }

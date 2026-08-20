@@ -18,7 +18,8 @@
 namespace hip {
 class Device;
 extern std::vector<hip::Device*> g_devices;
-extern hipError_t ihipGetDeviceProperties(hipDeviceProp_tR0600* props, hipDevice_t device);
+// ihip is internal/unstable API
+extern hipError_t ihipGetDeviceProperties(hipDeviceProp_t* props, hipDevice_t device);
 }  // namespace hip
 
 namespace hrr_cap {
@@ -92,7 +93,7 @@ std::string uuid_to_hex(const hipUUID& uuid) {
   return bytes_to_hex(uuid.bytes, sizeof(uuid.bytes));
 }
 
-void append_prop_fields(std::ostringstream& os, const hipDeviceProp_tR0600& prop) {
+void append_prop_fields(std::ostringstream& os, const hipDeviceProp_t& prop) {
   os << "      \"properties\": {\n"
      << "        \"name\": " << quote(bounded_string(prop.name, sizeof(prop.name))) << ",\n"
      << "        \"gcn_arch_name\": "
@@ -150,7 +151,7 @@ DeviceMetadata collect_device_metadata(int device_count) {
   int captured_count = 0;
 
   for (int device = 0; device < device_count; ++device) {
-    hipDeviceProp_tR0600 prop{};
+    hipDeviceProp_t prop{};
     const hipError_t prop_err = hip::ihipGetDeviceProperties(&prop, device);
     if (prop_err != hipSuccess) continue;
 

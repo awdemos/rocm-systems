@@ -874,7 +874,3 @@ hipError_t hipSetValidDevices(int* device_arr, int len) {
   HIP_RETURN(hipSuccess);
 }
 }  // namespace hip
-
-extern "C" hipError_t hipChooseDevice(int* device, const hipDeviceProp_tR0000* properties) {
-  return hip::hipChooseDeviceR0000(device, properties);
-}

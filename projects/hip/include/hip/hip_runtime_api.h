@@ -237,6 +237,21 @@ typedef struct hipDeviceProp_tR0600 {
   int asicRevision;                              ///< Revision of the GPU in this device
 } hipDeviceProp_tR0600;
 
+/*
+ Versioning struct. Because each public API must use the versioned struct to
+ ensure ABI compatibility, we must typedef the actual struct name here.
+*/
+#if HIP_FORCE_API_VERSION < 600
+
+typedef struct hipDeviceProp_tR0000 hipDeviceProp_tR0000;
+typedef hipDeviceProp_tR0000 hipDeviceProp_t;
+
+#else
+
+typedef hipDeviceProp_tR0600 hipDeviceProp_t;
+
+#endif
+
 /**
  * hipMemoryType (for pointer attributes)
  *
@@ -2203,20 +2218,6 @@ typedef enum hipMemRangeFlags {
   hipMemRangeFlagsMax = 0x7fffffff
 } hipMemRangeFlags;
 
-/*
- Versioning struct. Because each public API must use the versioned struct to
- ensure ABI compatibility, we must typedef the actual struct name here.
-*/
-#if HIP_FORCE_API_VERSION < 600
-
-typedef struct hipDeviceProp_tR0000 hipDeviceProp_tR0000;
-typedef hipDeviceProp_tR0000 hipDeviceProp_t;
-
-#else
-
-typedef hipDeviceProp_tR0600 hipDeviceProp_t;
-
-#endif
 
 // Doxygen end group GlobalDefs
 /**
@@ -2556,7 +2557,7 @@ hipError_t hipGetDevicePropertiesR0600(hipDeviceProp_tR0600* prop, int deviceId)
 // Deprecate since 600
 #if HIP_FORCE_API_VERSION < 600
 
-hipError_t hipGetDeviceProperties(hipDeviceProp_tR0000* prop, int deviceId);
+hipError_t hipGetDevicePropertiesR0000(hipDeviceProp_tR0000* prop, int deviceId);
 
 #else
 
@@ -2725,7 +2726,7 @@ hipError_t hipChooseDeviceR0600(int* device, const hipDeviceProp_tR0600* prop);
 // Deprecate since 600
 #if HIP_FORCE_API_VERSION < 600
 
-hipError_t hipChooseDevice(int* device, const hipDeviceProp_tR0000* prop);
+hipError_t hipChooseDeviceR0000(int* device, const hipDeviceProp_tR0000* prop);
 
 #else
 

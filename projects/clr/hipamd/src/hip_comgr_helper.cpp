@@ -817,8 +817,8 @@ bool RTCProgram::findIsa() {
   if (status != hipSuccess) {
     return false;
   }
-  hipDeviceProp_tR0600 props;
-  status = hipGetDevicePropertiesR0600(&props, device);
+  hipDeviceProp_t props;
+  status = hipGetDeviceProperties(&props, device);
   if (status != hipSuccess) {
     return false;
   }

@@ -489,7 +489,7 @@ hipError_t hipOccupancyAvailableDynamicSMemPerBlock(size_t* dynamicSmemSize, con
     HIP_RETURN(hipErrorInvalidHandle);
   }
 
-  hipDeviceProp_tR0600 prop = {0};
+  hipDeviceProp_t prop = {0};
   HIP_RETURN_ONFAIL(ihipGetDeviceProperties(&prop, dev_id));
 
   if (blockSize > prop.maxThreadsPerMultiProcessor) {
