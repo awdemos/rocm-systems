@@ -5936,14 +5936,11 @@ typedef struct {
  *  as ::AMDSMI_STATUS_INVAL
  *
  *  @return ::amdsmi_status_t
- *  - ::AMDSMI_STATUS_SUCCESS if at least one attribute yielded usable content
+ *  - ::AMDSMI_STATUS_SUCCESS if at least one attribute yielded usable content. A
+ *    fabric that is present but not yet configured also returns success: read the
+ *    accel_state field of @p info to tell the two apart
  *  - ::AMDSMI_STATUS_NO_DATA if no attribute yielded usable data (output still
  *    contains BDF and default/sentinel fabric fields)
- *  - ::AMDSMI_STATUS_NOT_INIT if the fabric read succeeded but the accelerator
- *    state is unconfigured or unknown. Despite the name, this is data-bearing and
- *    not a failure: @p info is populated and its accel_state field reports the
- *    unconfigured state. Callers reading fabric data should treat this like
- *    ::AMDSMI_STATUS_SUCCESS
  *  - Other codes (e.g. ::AMDSMI_STATUS_INVAL for an invalid processor handle) on
  *    failure
  *

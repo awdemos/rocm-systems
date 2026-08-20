@@ -168,19 +168,13 @@ void TestFabricRead::Run(void) {
                   << std::endl;
       }
       continue;
-    } else if (err != AMDSMI_STATUS_SUCCESS && err != AMDSMI_STATUS_NO_DATA &&
-               err != AMDSMI_STATUS_NOT_INIT) {
+    } else if (err != AMDSMI_STATUS_SUCCESS && err != AMDSMI_STATUS_NO_DATA) {
       CHK_ERR_ASRT(err)
     } else {
       IF_VERB(STANDARD) {
         if (err == AMDSMI_STATUS_NO_DATA) {
           std::cout << "\t**amdsmi_get_gpu_fabric_info() returned NO_DATA "
                        "(no UALoE sysfs content); BDF may still be valid"
-                    << std::endl;
-        }
-        if (err == AMDSMI_STATUS_NOT_INIT) {
-          std::cout << "\t**amdsmi_get_gpu_fabric_info() returned NOT_INIT "
-                       "(no UALoE sysfs content); accelerators may not be configured/setup"
                     << std::endl;
         }
         const auto& v1 = fabric_info.fabric_info.v1;

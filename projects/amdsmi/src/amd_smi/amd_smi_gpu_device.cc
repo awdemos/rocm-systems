@@ -943,28 +943,13 @@ auto AMDSmiGPUDevice::get_fabric_info_from_ualoe(amdsmi_fabric_info_t& fabric_in
 
   /**
    *    Driver contract: a present sysfs file means the feature is supported; a
-   *    present-but-empty IFoE file means supported-but-unconfigured.
-   *    File presence alone can't tell the two apart, so accel_state below is what separates a
-   *    configured read (SUCCESS) from an unconfigured one (NOT_INIT).
+   *    present-but-empty IFoE file means supported-but-unconfigured. File presence alone
+   *    can't tell the two apart, so callers read accel_state to separate a configured
+   *    fabric from an unconfigured one.
    */
-  auto status_code = (((flat_files_with_usable_content > 0) || is_any_plane_success)
-                          ? amdsmi_status_t::AMDSMI_STATUS_SUCCESS
-                          : amdsmi_status_t::AMDSMI_STATUS_NO_DATA);
-
-  /**
-   *  Reuse the accel_state already parsed into v1 (avoids a second sysfs read) so the status
-   *  matches the value returned in fabric_info. Relies on the flat loop having read accel_state:
-   *  a link_info_type that excludes it leaves the UNKNOWN sentinel and forces NOT_INIT.
-   */
-  if (is_any_plane_success &&
-      ((v1.accel_state == amdsmi_fabric_accelerator_vpod_state_t::
-                              AMDSMI_FABRIC_ACCELERATOR_VPOD_STATE_UNCONFIGURED) ||
-       (v1.accel_state ==
-        amdsmi_fabric_accelerator_vpod_state_t::AMDSMI_FABRIC_ACCELERATOR_VPOD_STATE_UNKNOWN))) {
-    status_code = amdsmi_status_t::AMDSMI_STATUS_NOT_INIT;
-  }
-
-  return status_code;
+  return (((flat_files_with_usable_content > 0) || is_any_plane_success)
+              ? amdsmi_status_t::AMDSMI_STATUS_SUCCESS
+              : amdsmi_status_t::AMDSMI_STATUS_NO_DATA);
 }
 
 }  // namespace amd::smi
