@@ -22,7 +22,6 @@
 #endif
 
 #include "algorithms/CollCommon.h"
-#include "algorithms/CollCommon_ll128.h"
 #include "algorithms/ll128_pack.h"
 
 #ifndef RCCL_LL128_AG_LOCAL_COPY_NT
@@ -31,28 +30,27 @@
 
 namespace meta::comms {
 
-// Slot stride, byte-identical to the LL128 reduce-scatter and all-to-all slots.
-// All of them base at scratch offset 0, so sharing one stride puts every DDA
-// LL128 collective's slot and bank boundaries at the same addresses and
-// consecutive ops always land in opposite banks. A stride of our own would let a
-// peer that is an epoch ahead store into a region this rank is still polling.
-constexpr size_t kDdaLL128AgSlotBudgetBytes = 524288; // 512 KiB
-constexpr size_t kDdaLL128AgSlotStrideLines =
-  (kDdaLL128AgSlotBudgetBytes / 8 + (size_t)kDdaLL128DataElems - 1) / (size_t)kDdaLL128DataElems; // 4370
-constexpr size_t kDdaLL128AgSlotWords = kDdaLL128AgSlotStrideLines * (kDdaLL128LineBytes / 8); // 69920
+// Slot geometry is derived from the scratch allocation rather than pinned to a
+// compile-time budget, so the reach grows with the buffer instead of capping the
+// all-gather well below the LL128 size threshold. Scratch holds 2 banks of
+// nRanks slots, and both inputs are identical on every rank of the comm, so all
+// ranks agree on the layout without exchanging it.
+constexpr size_t ddaLL128AgSlotSlices(int nRanks, size_t scratchBytes) {
+  return nRanks < 1 ? 0
+                    : scratchBytes / ((size_t)2 * (size_t)nRanks * (size_t)ll128::kWireBytesPerSlice);
+}
 
-// Whole slices the slot holds, and the payload they carry. 4370 lines is 273.125
-// slices; the trailing fraction is unusable, which puts the cap 128B under the
-// budget above. Admitting the budget instead would let the last slice of a
-// max-size call run past the slot into the next rank's.
-constexpr size_t kDdaLL128AgSlotSlices = kDdaLL128AgSlotWords / (size_t)ll128::kWireWordsPerSlice; // 273
-constexpr size_t kDdaLL128AgMaxPerRankBytes =
-  kDdaLL128AgSlotSlices * (size_t)ll128::kDataBytesPerSlice; // 524160
-static_assert(ddaLL128AgSlices(kDdaLL128AgMaxPerRankBytes) <= kDdaLL128AgSlotSlices,
-              "a call at the advertised cap must fit the slot");
+// Slot stride in 8B words. A whole number of slices, so also a whole number of
+// 128B lines.
+constexpr size_t ddaLL128AgSlotWords(int nRanks, size_t scratchBytes) {
+  return ddaLL128AgSlotSlices(nRanks, scratchBytes) * (size_t)ll128::kWireWordsPerSlice;
+}
 
-static_assert((kDdaLL128AgSlotWords * 8) % (size_t)ll128::kLineBytes == 0,
-              "slot stride must be a whole number of 128B lines");
+// Payload the slot carries. Whole slices only: a partial trailing slice would
+// run past the slot into the next rank's.
+constexpr size_t ddaLL128AgMaxPerRankBytes(int nRanks, size_t scratchBytes) {
+  return ddaLL128AgSlotSlices(nRanks, scratchBytes) * (size_t)ll128::kDataBytesPerSlice;
+}
 
 __device__ __forceinline__ uint32_t ddaLL128AgEpochBegin(const uint32_t* __restrict__ epochDev, int flatBlockId) {
   uint32_t f = epochDev[flatBlockId] + 1u;
@@ -84,7 +82,8 @@ __launch_bounds__(1024)
                                           int selfRank, int nRanksRt,
                                           uint32_t* __restrict__ epochDev, // per-block LL epoch cells
                                           int epochLen, // number of cells in epochDev
-                                          size_t slicesTotal) { // slices this call uses
+                                          size_t slicesTotal, // slices this call uses
+                                          size_t slotWords) { // per-rank slot stride, in 8B words
 
   const int nRanks = NRANKS_CT ? NRANKS_CT : nRanksRt;
 
@@ -108,7 +107,7 @@ __launch_bounds__(1024)
   const int total = (int)(gridDim.x * gridDim.y);
   const uint32_t flag32 = ddaLL128AgEpochBegin(epochDev, flatBlockId);
   const uint64_t flag = ((uint64_t)flag32 << 32) | (uint64_t)flag32;
-  const uint64_t bankWords = (uint64_t)(flag32 & 1u) * (uint64_t)nRanks * kDdaLL128AgSlotWords;
+  const uint64_t bankWords = (uint64_t)(flag32 & 1u) * (uint64_t)nRanks * (uint64_t)slotWords;
 
   // Slices stride by warp within this peer's column only.
   const size_t gwarp = (size_t)blockIdx.y * (size_t)nwarps + (size_t)warp;
@@ -116,9 +115,9 @@ __launch_bounds__(1024)
 
   const int8_t* srcBytes = reinterpret_cast<const int8_t*>(sendbuff);
   uint64_t* scatterSlot = reinterpret_cast<uint64_t*>(peerScratch[peer]) + bankWords +
-    (uint64_t)selfRank * kDdaLL128AgSlotWords;
+    (uint64_t)selfRank * (uint64_t)slotWords;
   const uint64_t* gatherSlot = reinterpret_cast<const uint64_t*>(peerScratch[selfRank]) + bankWords +
-    (uint64_t)peer * kDdaLL128AgSlotWords;
+    (uint64_t)peer * (uint64_t)slotWords;
   int8_t* dstBytes = reinterpret_cast<int8_t*>(recvbuff) + (size_t)peer * perRankBytes;
 
   // Phase 1: pack and push this column's slices to the one peer it owns.

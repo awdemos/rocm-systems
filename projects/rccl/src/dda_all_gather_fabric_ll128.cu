@@ -29,15 +29,10 @@ RCCL_PARAM(DdaLL128AgMaxBlocks, "DDA_LL128_AG_MAXBLOCKS", DDA_FABRIC_MAXBLOCKS);
 
 namespace {
 
+using meta::comms::ddaLL128AgMaxPerRankBytes;
 using meta::comms::ddaLL128AgSlices;
-using meta::comms::kDdaLL128AgMaxPerRankBytes;
-using meta::comms::kDdaLL128AgSlotWords;
+using meta::comms::ddaLL128AgSlotWords;
 namespace ll128 = meta::comms::ll128;
-
-// LL128 scratch: 2 banks * nRanks slots * kDdaLL128AgSlotWords * 8B.
-size_t ddaLL128AgScratchSize(int nRanks) {
-  return (size_t)2 * (size_t)nRanks * kDdaLL128AgSlotWords * sizeof(uint64_t);
-}
 
 // Validated block size from the runtime flag; falls back to `dflt` if the
 // configured value is not a whole number of waves in [wave, 1024].
@@ -77,6 +72,7 @@ static ncclResult_t ncclAllGatherDdaFabricLL128Typed(
   const int nRanks = comm->nRanks;
   const size_t perRankBytes = sendcount * sizeof(T);
   const size_t slices = ddaLL128AgSlices(perRankBytes);
+  const size_t slotWords = ddaLL128AgSlotWords(nRanks, comm->ddaScratchBytes);
 
   // grid.x == nRanks - 1 (one column per remote peer), grid.y == blocksPerPeer.
   const unsigned threads = ddaLL128AgThreads(512);
@@ -102,24 +98,24 @@ static ncclResult_t ncclAllGatherDdaFabricLL128Typed(
   INFO(NCCL_COLL,
        "DDA fabric AllGather LL128: nRanks=%d perRankBytes=%zu slices=%zu grid=%ux%u block=%u "
        "(warp-per-slice, bpp=%u, slotWords=%zu)",
-       nRanks, perRankBytes, slices, grid.x, grid.y, block.x, blocksPerPeer, kDdaLL128AgSlotWords);
+       nRanks, perRankBytes, slices, grid.x, grid.y, block.x, blocksPerPeer, slotWords);
 
   // NRANKS_CT 4/8: unrolled; 0: runtime fallback.
   switch (nRanks) {
   case 4:
     meta::comms::ddaAllGatherFabricLL128<T, 4>
       <<<grid, block, 0, stream>>>(peers, static_cast<T*>(recvbuff), static_cast<const T*>(sendbuff), perRankBytes,
-                                   comm->rank, nRanks, epochDev, epochLen, slices);
+                                   comm->rank, nRanks, epochDev, epochLen, slices, slotWords);
     break;
   case 8:
     meta::comms::ddaAllGatherFabricLL128<T, 8>
       <<<grid, block, 0, stream>>>(peers, static_cast<T*>(recvbuff), static_cast<const T*>(sendbuff), perRankBytes,
-                                   comm->rank, nRanks, epochDev, epochLen, slices);
+                                   comm->rank, nRanks, epochDev, epochLen, slices, slotWords);
     break;
   default:
     meta::comms::ddaAllGatherFabricLL128<T, 0>
       <<<grid, block, 0, stream>>>(peers, static_cast<T*>(recvbuff), static_cast<const T*>(sendbuff), perRankBytes,
-                                   comm->rank, nRanks, epochDev, epochLen, slices);
+                                   comm->rank, nRanks, epochDev, epochLen, slices, slotWords);
     break;
   }
 
@@ -160,10 +156,9 @@ bool ncclAllGatherDdaFabricLL128Eligible(ncclComm* comm, const void* sendbuff, v
   if ((reinterpret_cast<uintptr_t>(sendbuff) % 16) != 0 || (reinterpret_cast<uintptr_t>(recvbuff) % 16) != 0) {
     return false;
   }
-  if (perRankBytes > kDdaLL128AgMaxPerRankBytes) {
-    return false;
-  }
-  if (ddaLL128AgScratchSize(comm->nRanks) > comm->ddaScratchBytes) {
+  // Derived from the scratch allocation, so this also covers the case of a
+  // buffer too small to hold a single slice per slot.
+  if (perRankBytes > ddaLL128AgMaxPerRankBytes(comm->nRanks, comm->ddaScratchBytes)) {
     return false;
   }
 
