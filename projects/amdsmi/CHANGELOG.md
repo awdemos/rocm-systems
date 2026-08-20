@@ -4,6 +4,25 @@ Full documentation for amd_smi_lib is available at [https://rocm.docs.amd.com/pr
 
 ***All information listed below is for reference and subject to change.***
 
+## amd_smi_lib for ROCm 10.1.0
+
+### Added
+
+- **Added fabric PPOD/VPOD/DF-station configuration APIs**.  
+  - New C APIs: `amdsmi_set_gpu_fabric_ppod_config()`, `amdsmi_set_gpu_fabric_vpod_config()`, `amdsmi_set_gpu_fabric_station_config()`.
+  - New Python APIs: `amdsmi_set_gpu_fabric_ppod_config()`, `amdsmi_set_gpu_fabric_vpod_config()`, `amdsmi_set_gpu_fabric_station_config()`. Each writes only the parameters supplied; the field mask is derived from them.
+  - New types: `amdsmi_fabric_ppod_config_t`, `amdsmi_fabric_vpod_config_t`, `amdsmi_fabric_station_config_t`, their `amdsmi_fabric_*_data_t` payloads, the `amdsmi_fabric_config_version_t` version tags, and the `AMDSMI_FABRIC_PPOD_FIELD_*`, `AMDSMI_FABRIC_VPOD_FIELD_*`, and `AMDSMI_FABRIC_DF_FIELD_*` field masks.
+  - Requires IFoE/UALoE fabric hardware; other devices return `AMDSMI_STATUS_NOT_SUPPORTED`.
+
+### Changed
+
+- **Grouped `amdsmi_fabric_info_v1_t` fields into `ppod`, `vpod`, and `station` sub-structures** (breaking).  
+  - Field access moves from `fabric_info.v1.<field>` to `fabric_info.v1.ppod.<field>`, `fabric_info.v1.vpod.<field>`, or `fabric_info.v1.station.<field>`; field offsets and the overall structure size change accordingly.
+  - The Python `amdsmi_get_gpu_fabric_info()` dictionary keys are unchanged.
+
+- **`amdsmi_get_gpu_fabric_info()` no longer returns `AMDSMI_STATUS_NOT_INIT`**.  
+  - A fabric that is present but not yet configured now returns `AMDSMI_STATUS_SUCCESS`; read the `accel_state` field to tell it apart from a configured one. The previous `AMDSMI_STATUS_NOT_INIT` return was data-bearing rather than a failure, so generic `status != SUCCESS` error handling misclassified a good read.
+
 ## amd_smi_lib for ROCm 7.15.0
 
 ### Added
