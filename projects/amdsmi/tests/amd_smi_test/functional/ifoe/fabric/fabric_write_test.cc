@@ -102,21 +102,10 @@ void TestFabricWrite::Run() {
   auto device = processor_handles_[0];
 
   /**
-   *    IFoE capability gate: fabric-less systems report NOT_SUPPORTED from
-   *    amdsmi_get_gpu_fabric_info(); skip the whole test rather than exercise the
-   *    hardware paths below (matches the Fabric Read test)
-   *    Probes device 0 only, assuming a homogeneous fabric config across devices;
-   *    a mixed host (some devices fabric-capable, some not) would skip on device 0.
+   *    Request validation runs ahead of the fabric support gate, so every rejection case
+   *    below is exercised on hosts without IFoE hardware too. The capability gate sits
+   *    further down, guarding only the paths that touch hardware.
    */
-  {
-    auto probe = amdsmi_fabric_info_t{};
-    if (amdsmi_get_gpu_fabric_info(device, &probe) == AMDSMI_STATUS_NOT_SUPPORTED) {
-      IF_VERB(STANDARD) {
-        std::cout << "\t**Fabric (IFoE) not supported on this system; skipping test" << "\n";
-      }
-      GTEST_SKIP() << "Fabric (IFoE) not supported on this system";
-    }
-  }
 
   /**
    *    Null handle rejection (no device required)
@@ -231,6 +220,23 @@ void TestFabricWrite::Run() {
   }
 
   /**
+   *    IFoE capability gate: fabric-less systems report NOT_SUPPORTED from
+   *    amdsmi_get_gpu_fabric_info(); skip the remaining hardware paths rather than
+   *    exercise them (matches the Fabric Read test)
+   *    Probes device 0 only, assuming a homogeneous fabric config across devices;
+   *    a mixed host (some devices fabric-capable, some not) would skip on device 0.
+   */
+  {
+    auto probe = amdsmi_fabric_info_t{};
+    if (amdsmi_get_gpu_fabric_info(device, &probe) == AMDSMI_STATUS_NOT_SUPPORTED) {
+      IF_VERB(STANDARD) {
+        std::cout << "\t**Fabric (IFoE) not supported on this system; skipping test" << "\n";
+      }
+      GTEST_SKIP() << "Fabric (IFoE) not supported on this system";
+    }
+  }
+
+  /**
    *    Hw path: accepts valid requests or reports NOT_SUPPORTED
    */
   for (auto dv_ind = uint32_t(0); dv_ind < num_monitor_devs(); ++dv_ind) {
@@ -301,8 +307,7 @@ void TestFabricWrite::Run() {
       continue;
     }
     ASSERT_TRUE((baseline_status == AMDSMI_STATUS_SUCCESS) ||
-                (baseline_status == AMDSMI_STATUS_NO_DATA) ||
-                (baseline_status == AMDSMI_STATUS_NOT_INIT));
+                (baseline_status == AMDSMI_STATUS_NO_DATA));
 
     const auto& baseline_v1 = baseline_info.fabric_info.v1;
 
@@ -329,7 +334,7 @@ void TestFabricWrite::Run() {
 
           auto post = amdsmi_fabric_info_t{};
           auto rd = amdsmi_get_gpu_fabric_info(dev, &post);
-          ASSERT_TRUE((rd == AMDSMI_STATUS_SUCCESS) || (rd == AMDSMI_STATUS_NOT_INIT));
+          ASSERT_EQ(rd, AMDSMI_STATUS_SUCCESS);
           ASSERT_EQ(post.fabric_info.v1.ppod.accelerator_id, 7u);
 
           auto restore = make_minimal_ppod_config();
@@ -364,7 +369,7 @@ void TestFabricWrite::Run() {
 
           auto post = amdsmi_fabric_info_t{};
           auto rd = amdsmi_get_gpu_fabric_info(dev, &post);
-          ASSERT_TRUE((rd == AMDSMI_STATUS_SUCCESS) || (rd == AMDSMI_STATUS_NOT_INIT));
+          ASSERT_EQ(rd, AMDSMI_STATUS_SUCCESS);
           ASSERT_EQ(post.fabric_info.v1.vpod.vpod_id, 3u);
 
           auto restore = make_minimal_vpod_config();
@@ -405,7 +410,7 @@ void TestFabricWrite::Run() {
 
           auto post = amdsmi_fabric_info_t{};
           auto rd = amdsmi_get_gpu_fabric_info(dev, &post);
-          ASSERT_TRUE((rd == AMDSMI_STATUS_SUCCESS) || (rd == AMDSMI_STATUS_NOT_INIT));
+          ASSERT_EQ(rd, AMDSMI_STATUS_SUCCESS);
           const auto& accels = post.fabric_info.v1.vpod.vpod_active_accelerators;
           ASSERT_EQ(accels[0], 2u);
           ASSERT_EQ(accels[1], 5u);
@@ -445,7 +450,7 @@ void TestFabricWrite::Run() {
 
           auto post = amdsmi_fabric_info_t{};
           auto rd = amdsmi_get_gpu_fabric_info(dev, &post);
-          ASSERT_TRUE((rd == AMDSMI_STATUS_SUCCESS) || (rd == AMDSMI_STATUS_NOT_INIT));
+          ASSERT_EQ(rd, AMDSMI_STATUS_SUCCESS);
           ASSERT_EQ(post.fabric_info.v1.station.station_flags, 1u);
 
           auto restore = make_minimal_station_config();
