@@ -7087,9 +7087,10 @@ def amdsmi_get_gpu_fabric_info(processor_handle: processor_handle_t) -> Dict[str
     """
     Return fabric info from UALoE sysfs (partial reads).
 
-    The C API may return AMDSMI_STATUS_NOT_INIT when the accelerators are not configured/setup
-    The C API may return AMDSMI_STATUS_NO_DATA when no sysfs files produced usable
-    lines; the struct is still populated with BDF and sentinel/default fabric fields.
+    A fabric that is present but not yet configured still returns successfully; read
+    accel_state to tell it apart from a configured one. The C API may return
+    AMDSMI_STATUS_NO_DATA when no sysfs files produced usable lines; the struct is still
+    populated with BDF and sentinel/default fabric fields.
     """
     if not isinstance(processor_handle, amdsmi_wrapper.amdsmi_processor_handle):
         raise AmdSmiParameterException(processor_handle, amdsmi_wrapper.amdsmi_processor_handle)
@@ -7100,11 +7101,7 @@ def amdsmi_get_gpu_fabric_info(processor_handle: processor_handle_t) -> Dict[str
         raise AmdSmiRetryException()
     if ret == amdsmi_wrapper.AMDSMI_STATUS_TIMEOUT:
         raise AmdSmiTimeoutException()
-    if ret not in (
-        amdsmi_wrapper.AMDSMI_STATUS_SUCCESS,
-        amdsmi_wrapper.AMDSMI_STATUS_NO_DATA,
-        amdsmi_wrapper.AMDSMI_STATUS_NOT_INIT,
-    ):
+    if ret not in (amdsmi_wrapper.AMDSMI_STATUS_SUCCESS, amdsmi_wrapper.AMDSMI_STATUS_NO_DATA):
         raise AmdSmiLibraryException(ret)
 
     v1 = fabric_info.fabric_info.v1
@@ -7131,6 +7128,201 @@ def amdsmi_get_gpu_fabric_info(processor_handle: processor_handle_t) -> Dict[str
         "num_stations": station.num_stations,
         "lane_en_bitmap": list(station.lane_en_bitmap),
     }
+
+
+def _fabric_fill_array(field, values, name: str, pad: int, exact: bool = False) -> None:
+    if not isinstance(values, (list, tuple)):
+        raise AmdSmiParameterException(values, list)
+    if exact and len(values) != len(field):
+        raise AmdSmiParameterException(
+            values, list, f"{name} requires exactly {len(field)} entries, got {len(values)}"
+        )
+    if len(values) > len(field):
+        raise AmdSmiParameterException(
+            values, list, f"{name} accepts at most {len(field)} entries, got {len(values)}"
+        )
+    for index in range(len(field)):
+        value = values[index] if index < len(values) else pad
+        if not isinstance(value, int):
+            raise AmdSmiParameterException(value, int)
+        field[index] = value
+        # ctypes narrows out-of-range values silently, so confirm the write survived
+        if field[index] != value:
+            raise AmdSmiParameterException(
+                value, int, f"{name}[{index}] value {value} is out of range for this field"
+            )
+
+
+def _fabric_set_scalar(config, name: str, value, bit: int) -> int:
+    if not isinstance(value, int):
+        raise AmdSmiParameterException(value, int)
+    setattr(config.data, name, value)
+    # ctypes narrows out-of-range values silently, so confirm the write survived
+    if getattr(config.data, name) != value:
+        raise AmdSmiParameterException(
+            value, int, f"{name} value {value} is out of range for this field"
+        )
+    return bit
+
+
+def amdsmi_set_gpu_fabric_ppod_config(
+    processor_handle: processor_handle_t,
+    accelerator_id: Union[int, None] = None,
+    ppod_id: Union[List[int], None] = None,
+    ppod_size: Union[int, None] = None,
+    local_accelerators: Union[List[int], None] = None,
+    bandwidth: Union[int, None] = None,
+    latency: Union[int, None] = None,
+    commit: bool = True,
+) -> None:
+    """
+    Apply a Physical PoD (ppod) fabric configuration.
+
+    Only the parameters supplied are written; the field mask is derived from them.
+    ``local_accelerator_count`` is taken from the length of ``local_accelerators``.
+    Supplying no parameters with ``commit=True`` flushes previously staged values.
+    """
+    if not isinstance(processor_handle, amdsmi_wrapper.amdsmi_processor_handle):
+        raise AmdSmiParameterException(processor_handle, amdsmi_wrapper.amdsmi_processor_handle)
+    if not isinstance(commit, bool):
+        raise AmdSmiParameterException(commit, bool)
+
+    config = amdsmi_wrapper.amdsmi_fabric_ppod_config_t()
+    config.version = amdsmi_wrapper.AMDSMI_FABRIC_PPOD_CONFIG_V1
+    config.commit = commit
+    mask = 0
+
+    if accelerator_id is not None:
+        mask |= _fabric_set_scalar(
+            config,
+            "accelerator_id",
+            accelerator_id,
+            amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_ACCEL_ID,
+        )
+    if ppod_id is not None:
+        _fabric_fill_array(config.data.ppod_id, ppod_id, "ppod_id", 0, exact=True)
+        mask |= amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_PPOD_ID
+    if ppod_size is not None:
+        mask |= _fabric_set_scalar(
+            config, "ppod_size", ppod_size, amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_PPOD_SIZE
+        )
+    if local_accelerators is not None:
+        _fabric_fill_array(
+            config.data.local_accelerators, local_accelerators, "local_accelerators", 0
+        )
+        config.data.local_accelerator_count = len(local_accelerators)
+        mask |= amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_LOCAL_ACCELS
+    if bandwidth is not None:
+        mask |= _fabric_set_scalar(
+            config, "bandwidth", bandwidth, amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_BANDWIDTH
+        )
+    if latency is not None:
+        mask |= _fabric_set_scalar(
+            config, "latency", latency, amdsmi_wrapper.AMDSMI_FABRIC_PPOD_FIELD_LATENCY
+        )
+
+    config.mask = mask
+    _check_res(
+        amdsmi_wrapper.amdsmi_set_gpu_fabric_ppod_config(processor_handle, ctypes.byref(config))
+    )
+
+
+def amdsmi_set_gpu_fabric_vpod_config(
+    processor_handle: processor_handle_t,
+    vpod_id: Union[int, None] = None,
+    vpod_size: Union[int, None] = None,
+    vpod_active_accelerators: Union[List[int], None] = None,
+    addr_mode: Union[int, None] = None,
+    commit: bool = True,
+) -> None:
+    """
+    Apply a Virtual PoD (vpod) fabric configuration.
+
+    Only the parameters supplied are written; the field mask is derived from them.
+    ``vpod_active_accelerators`` is an accelerator ID list: unused slots are padded with
+    the UNSET value (``UINT32_MAX``). Supplying no parameters with ``commit=True`` flushes
+    previously staged values.
+    """
+    if not isinstance(processor_handle, amdsmi_wrapper.amdsmi_processor_handle):
+        raise AmdSmiParameterException(processor_handle, amdsmi_wrapper.amdsmi_processor_handle)
+    if not isinstance(commit, bool):
+        raise AmdSmiParameterException(commit, bool)
+
+    config = amdsmi_wrapper.amdsmi_fabric_vpod_config_t()
+    config.version = amdsmi_wrapper.AMDSMI_FABRIC_VPOD_CONFIG_V1
+    config.commit = commit
+    mask = 0
+
+    if vpod_id is not None:
+        mask |= _fabric_set_scalar(
+            config, "vpod_id", vpod_id, amdsmi_wrapper.AMDSMI_FABRIC_VPOD_FIELD_VPOD_ID
+        )
+    if vpod_size is not None:
+        mask |= _fabric_set_scalar(
+            config, "vpod_size", vpod_size, amdsmi_wrapper.AMDSMI_FABRIC_VPOD_FIELD_VPOD_SIZE
+        )
+    if vpod_active_accelerators is not None:
+        _fabric_fill_array(
+            config.data.vpod_active_accelerators,
+            vpod_active_accelerators,
+            "vpod_active_accelerators",
+            MaxUIntegerTypes.UINT32_T,
+        )
+        mask |= amdsmi_wrapper.AMDSMI_FABRIC_VPOD_FIELD_VPOD_ACTIVE_ACCELS
+    if addr_mode is not None:
+        mask |= _fabric_set_scalar(
+            config, "addr_mode", addr_mode, amdsmi_wrapper.AMDSMI_FABRIC_VPOD_FIELD_ADDR_MODE
+        )
+
+    config.mask = mask
+    _check_res(
+        amdsmi_wrapper.amdsmi_set_gpu_fabric_vpod_config(processor_handle, ctypes.byref(config))
+    )
+
+
+def amdsmi_set_gpu_fabric_station_config(
+    processor_handle: processor_handle_t,
+    station_flags: Union[int, None] = None,
+    lane_en_bitmap: Union[List[int], None] = None,
+    num_stations: Union[int, None] = None,
+    commit: bool = True,
+) -> None:
+    """
+    Apply a DF/station fabric configuration.
+
+    Only the parameters supplied are written; the field mask is derived from them.
+    ``lane_en_bitmap`` is a byte list; unspecified trailing bytes are zero-filled.
+    Supplying no parameters with ``commit=True`` flushes previously staged values.
+    """
+    if not isinstance(processor_handle, amdsmi_wrapper.amdsmi_processor_handle):
+        raise AmdSmiParameterException(processor_handle, amdsmi_wrapper.amdsmi_processor_handle)
+    if not isinstance(commit, bool):
+        raise AmdSmiParameterException(commit, bool)
+
+    config = amdsmi_wrapper.amdsmi_fabric_station_config_t()
+    config.version = amdsmi_wrapper.AMDSMI_FABRIC_STATION_CONFIG_V1
+    config.commit = commit
+    mask = 0
+
+    if station_flags is not None:
+        mask |= _fabric_set_scalar(
+            config,
+            "station_flags",
+            station_flags,
+            amdsmi_wrapper.AMDSMI_FABRIC_DF_FIELD_STATION_FLAGS,
+        )
+    if lane_en_bitmap is not None:
+        _fabric_fill_array(config.data.lane_en_bitmap, lane_en_bitmap, "lane_en_bitmap", 0)
+        mask |= amdsmi_wrapper.AMDSMI_FABRIC_DF_FIELD_LANE_EN_BITMAP
+    if num_stations is not None:
+        mask |= _fabric_set_scalar(
+            config, "num_stations", num_stations, amdsmi_wrapper.AMDSMI_FABRIC_DF_FIELD_NUM_STATIONS
+        )
+
+    config.mask = mask
+    _check_res(
+        amdsmi_wrapper.amdsmi_set_gpu_fabric_station_config(processor_handle, ctypes.byref(config))
+    )
 
 
 def amdsmi_get_gpu_busy_percent(processor_handle: processor_handle_t):

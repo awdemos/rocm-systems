@@ -6597,6 +6597,112 @@ finally:
     amdsmi.amdsmi_shut_down()
 ```
 
+### amdsmi_set_gpu_fabric_ppod_config
+
+Description: Applies a Physical PoD (ppod) fabric configuration to the target GPU. Only the parameters supplied are written; the field mask sent to the library is derived from them. Available only on platforms with IFoE/UALoE fabric hardware; other devices return not supported.
+
+Input parameters:
+
+* `processor_handle` device which to configure
+* `accelerator_id` accelerator identifier (optional)
+* `ppod_id` physical PoD identifier as a list of exactly 16 bytes (optional)
+* `ppod_size` physical PoD size (optional)
+* `local_accelerators` list of local accelerator IDs; the count written to the library is taken from its length (optional)
+* `bandwidth` station bandwidth share in Mb/s (optional)
+* `latency` latency in nanoseconds (optional)
+* `commit` when `True` (default), flush the written parameters
+
+Output: `None`
+
+Exceptions that can be thrown by `amdsmi_set_gpu_fabric_ppod_config` function:
+
+* `AmdSmiLibraryException`
+* `AmdSmiParameterException`
+
+Example:
+
+```python
+import amdsmi
+try:
+    amdsmi.amdsmi_init()
+    devices = amdsmi.amdsmi_get_processor_handles()
+    for device in devices:
+        amdsmi.amdsmi_set_gpu_fabric_ppod_config(device, accelerator_id=7)
+except amdsmi.AmdSmiException as e:
+    print(e)
+finally:
+    amdsmi.amdsmi_shut_down()
+```
+
+### amdsmi_set_gpu_fabric_vpod_config
+
+Description: Applies a Virtual PoD (vpod) fabric configuration to the target GPU. Only the parameters supplied are written; the field mask sent to the library is derived from them. Available only on platforms with IFoE/UALoE fabric hardware; other devices return not supported.
+
+Input parameters:
+
+* `processor_handle` device which to configure
+* `vpod_id` virtual PoD identifier; must be nonzero (optional)
+* `vpod_size` virtual PoD size (optional)
+* `vpod_active_accelerators` list of active accelerator IDs; unused slots are padded with the UNSET value `UINT32_MAX` (optional)
+* `addr_mode` NPA address mode (optional)
+* `commit` when `True` (default), flush the written parameters
+
+Output: `None`
+
+Exceptions that can be thrown by `amdsmi_set_gpu_fabric_vpod_config` function:
+
+* `AmdSmiLibraryException`
+* `AmdSmiParameterException`
+
+Example:
+
+```python
+import amdsmi
+try:
+    amdsmi.amdsmi_init()
+    devices = amdsmi.amdsmi_get_processor_handles()
+    for device in devices:
+        amdsmi.amdsmi_set_gpu_fabric_vpod_config(device, vpod_id=3, vpod_active_accelerators=[2, 5])
+except amdsmi.AmdSmiException as e:
+    print(e)
+finally:
+    amdsmi.amdsmi_shut_down()
+```
+
+### amdsmi_set_gpu_fabric_station_config
+
+Description: Applies a DF/station fabric configuration to the target GPU. Only the parameters supplied are written; the field mask sent to the library is derived from them. Available only on platforms with IFoE/UALoE fabric hardware; other devices return not supported.
+
+Input parameters:
+
+* `processor_handle` device which to configure
+* `station_flags` DF/station flags (optional)
+* `lane_en_bitmap` per-lane enable bitmap as a byte list; unspecified trailing bytes are zero-filled (optional)
+* `num_stations` number of stations (optional)
+* `commit` when `True` (default), flush the written parameters
+
+Output: `None`
+
+Exceptions that can be thrown by `amdsmi_set_gpu_fabric_station_config` function:
+
+* `AmdSmiLibraryException`
+* `AmdSmiParameterException`
+
+Example:
+
+```python
+import amdsmi
+try:
+    amdsmi.amdsmi_init()
+    devices = amdsmi.amdsmi_get_processor_handles()
+    for device in devices:
+        amdsmi.amdsmi_set_gpu_fabric_station_config(device, station_flags=1, num_stations=2)
+except amdsmi.AmdSmiException as e:
+    print(e)
+finally:
+    amdsmi.amdsmi_shut_down()
+```
+
 ### amdsmi_get_fabric_telemetry_data
 
 Description: Returns IFoE/UALoE fabric telemetry for the target GPU. The `category_mask` selects which telemetry categories to retrieve and is built from the `AMDSMI_FABRIC_TELEMETRY_CATEGORY_MASK_*` bit values. Available only on platforms with IFoE/UALoE fabric hardware; other devices return not supported.
