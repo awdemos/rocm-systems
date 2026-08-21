@@ -85,6 +85,68 @@ TEST_F(NetIbMPITest, FaultInjCastQpErrorIsFatal) {
     net_ = &netIbCast;
     AssertInitAndGetDevices(nullptr);
 
+    // Parameterized by MPIEnvironment::nThreads. Injected error state lives in
+    // the communicator, so each worker breaks only its own connection and each
+    // one must observe the failure on its own send.
+    if (MPIEnvironment::nThreads > 1) {
+        RunMultiThreadedIndependent(
+            0, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                const size_t size = 1024;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                // Warm the scheduler up before arming, as the serial body does.
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 300, mhandle,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                if (rank == 0) {
+                    // Posting this receive is what lets the peer reach the injected
+                    // error, and its send then fails before posting, so nothing will
+                    // complete this request. Flushing it keeps the work request from
+                    // outliving the memory region the worker must deregister.
+                    void* request = nullptr;
+                    result = WorkerPostRecv(pair.recvComm, buffer, size, 301, mhandle, &request);
+                    if (!result.ok) return result;
+                    if (WorkerDrainRecv(request, 100)) return result;
+                    return WorkerCastFlushAbandonedRecv(pair.recvComm, request);
+                }
+
+                int liveNqps = 0;
+                result = WorkerCastLiveNqps(pair.sendComm, &liveNqps);
+                if (!result.ok) return result;
+
+                result = WorkerCastFaultArmError(pair.sendComm, liveNqps);
+                if (!result.ok) return result;
+
+                const WorkerFaultSendOutcome outcome =
+                    WorkerCastFaultSend(pair.sendComm, buffer, size, 301, mhandle, 200);
+                if (outcome.sendRet == ncclSuccess && outcome.fatalCount <= 0) {
+                    result.ok = false;
+                    result.msg = "expected isend to fail or a fatal error to be counted after "
+                                 "arming every QP with error injection";
+                    return result;
+                }
+                return WorkerCastFaultClear(pair.sendComm);
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
+
     void* listenComm = nullptr;
     void* sendComm   = nullptr;
     void* recvComm   = nullptr;
@@ -362,6 +424,55 @@ TEST_F(NetIbMPITest, FaultInjCastDelayDataIntegrity) {
     net_ = &netIbCast;
     AssertInitAndGetDevices(nullptr);
 
+    // Parameterized by MPIEnvironment::nThreads: every worker slows down its own
+    // QP 0 and still has to deliver intact data while the other workers keep the
+    // device busy.
+    if (MPIEnvironment::nThreads > 1) {
+        RunMultiThreadedIndependent(
+            0, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                static constexpr int kThreadedMsgs = 20;
+                const size_t size = 8192;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 4999, mhandle,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                if (rank == 1) {
+                    result = WorkerCastFaultSetDelay(pair.sendComm, /*qpIdx=*/0,
+                                                     /*delayUs=*/2000);
+                    if (!result.ok) return result;
+                }
+
+                for (int i = 0; i < kThreadedMsgs; i++) {
+                    result = WorkerSendRecvPattern(rank, pair, buffer, size, 5000 + i, mhandle,
+                                                   WorkerSeed(threadIdx, i),
+                                                   kLargeTransferTimeoutMs);
+                    if (!result.ok) return result;
+                }
+
+                if (rank == 1) return WorkerCastFaultClear(pair.sendComm);
+                return result;
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
+
     void* listenComm = nullptr;
     void* sendComm   = nullptr;
     void* recvComm   = nullptr;
@@ -573,6 +684,95 @@ TEST_F(NetIbMPITest, FaultInjCastQpErrorClearRecovers) {
 
     net_ = &netIbCast;
     AssertInitAndGetDevices(nullptr);
+
+    // Parameterized by MPIEnvironment::nThreads. Each worker owns two
+    // connections: it breaks the first, clears the fault, and then has to move
+    // data cleanly on the second, so leftover fault state cannot hide behind a
+    // quiet fabric.
+    if (MPIEnvironment::nThreads > 1) {
+        RunMultiThreadedIndependentGroups(
+            ThreadDevPolicy::Fixed(0), MPIEnvironment::nThreads, /*connsPerWorker=*/2,
+            [&](int threadIdx, std::vector<ConnectionPair*>& pairs) -> ThreadResult {
+                ThreadResult result;
+                const size_t size = 1024;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                ConnectionPair& faulted = *pairs[0];
+                ConnectionPair& fresh   = *pairs[1];
+
+                void* faultedComm = (rank == 0) ? faulted.recvComm : faulted.sendComm;
+                void* faultedMh = nullptr;
+                result = WorkerRegister(faultedComm, buffer, size, NCCL_PTR_HOST, &faultedMh);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard faultedGuard(faultedMh,
+                                                   NetMHandleWorkerDeleter(net_, faultedComm));
+
+                result = WorkerSendRecvPattern(rank, faulted, buffer, size, 500, faultedMh,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                if (rank == 0) {
+                    // Flushed rather than left hanging: phase 2 reuses this buffer,
+                    // and a work request from the broken connection must not still
+                    // be pointing at it.
+                    void* request = nullptr;
+                    result = WorkerPostRecv(faulted.recvComm, buffer, size, 501, faultedMh,
+                                            &request);
+                    if (!result.ok) return result;
+                    if (!WorkerDrainRecv(request, 100)) {
+                        result = WorkerCastFlushAbandonedRecv(faulted.recvComm, request);
+                        if (!result.ok) return result;
+                    }
+                } else {
+                    int liveNqps = 0;
+                    result = WorkerCastLiveNqps(faulted.sendComm, &liveNqps);
+                    if (!result.ok) return result;
+
+                    result = WorkerCastFaultArmError(faulted.sendComm, liveNqps);
+                    if (!result.ok) return result;
+
+                    const WorkerFaultSendOutcome outcome =
+                        WorkerCastFaultSend(faulted.sendComm, buffer, size, 501, faultedMh, 200);
+                    if (outcome.sendRet == ncclSuccess && outcome.fatalCount <= 0) {
+                        result.ok = false;
+                        result.msg = "phase 1 did not observe the injected fault";
+                        return result;
+                    }
+                    result = WorkerCastFaultClear(faulted.sendComm);
+                    if (!result.ok) return result;
+                }
+
+                // Phase 2: the fresh connection must be unaffected.
+                void* freshComm = (rank == 0) ? fresh.recvComm : fresh.sendComm;
+                void* freshMh = nullptr;
+                result = WorkerRegister(freshComm, buffer, size, NCCL_PTR_HOST, &freshMh);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard freshGuard(freshMh,
+                                                 NetMHandleWorkerDeleter(net_, freshComm));
+
+                result = WorkerSendRecvPattern(rank, fresh, buffer, size, 502, freshMh,
+                                               WorkerSeed(threadIdx, 7));
+                if (!result.ok) return result;
+
+                if (rank == 1) {
+                    const int fatalCount = WorkerCastFatalCount(fresh.sendComm);
+                    if (fatalCount != 0) {
+                        result.ok = false;
+                        result.msg = "the fresh connection reports fatal errors ("
+                                     + std::to_string(fatalCount) + ")";
+                    }
+                }
+                return result;
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
 
     // ── Phase 1: inject fault on first connection ─────────────────────────
     void* listenComm1 = nullptr;
@@ -823,6 +1023,46 @@ TEST_F(NetIbMPITest, FailoverCqeErrorRecovered) {
     if (mergedDev < 0) {
         GTEST_SKIP() << "Failover requires NIC Fusion (ndevs >= 2). "
                      << "Found " << totalDevs << " physical devices.";
+    }
+
+    // Parameterized by MPIEnvironment::nThreads: N links fail at once, so the
+    // process-global recovery thread serves several communicators while each of
+    // them still has to deliver its payload over the surviving device.
+    if (MPIEnvironment::nThreads > 1) {
+        // Shared by the workers so every link fails at the same moment: the point
+        // of these threaded bodies is the one global recovery thread facing several
+        // broken communicators, which staggered failures would not produce.
+        std::atomic<int> atFailure{0};
+        RunMultiThreadedIndependent(
+            mergedDev, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                const size_t size = 8192;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 600, mhandle,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                return WorkerCastFailoverTransfer(rank, pair, buffer, size, 601, mhandle,
+                                                  WorkerSeed(threadIdx, 1), /*messages=*/1, &atFailure,
+                                                  MPIEnvironment::nThreads);
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
     }
 
     void* listenComm = nullptr;
@@ -1227,6 +1467,46 @@ TEST_F(NetIbMPITest, FailoverLargeMessageDataIntegrity) {
         GTEST_SKIP() << "Requires NIC Fusion (ndevs >= 2). Need at least 2 IB devices.";
     }
 
+    // Parameterized by MPIEnvironment::nThreads: concurrent 64 KB messages must
+    // survive their own link failure byte for byte, which also keeps several
+    // retransmit paths active on one device at the same time.
+    if (MPIEnvironment::nThreads > 1) {
+        // Shared by the workers so every link fails at the same moment: the point
+        // of these threaded bodies is the one global recovery thread facing several
+        // broken communicators, which staggered failures would not produce.
+        std::atomic<int> atFailure{0};
+        RunMultiThreadedIndependent(
+            mergedDev, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                const size_t size = 65536;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 900, mhandle,
+                                               WorkerSeed(threadIdx, 0), kLargeTransferTimeoutMs);
+                if (!result.ok) return result;
+
+                return WorkerCastFailoverTransfer(rank, pair, buffer, size, 901, mhandle,
+                                                  WorkerSeed(threadIdx, 1), /*messages=*/1, &atFailure,
+                                                  MPIEnvironment::nThreads);
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
+
     void* listenComm = nullptr;
     void* sendComm   = nullptr;
     void* recvComm   = nullptr;
@@ -1498,6 +1778,51 @@ TEST_F(NetIbMPITest, FailoverMultiRequestInFlight) {
         GTEST_SKIP() << "Requires NIC Fusion (ndevs >= 2).";
     }
 
+    // Parameterized by MPIEnvironment::nThreads: every worker drives several
+    // messages across its own link failure, so the resiliency state machine
+    // handles concurrent failed requests on several communicators at once.
+    if (MPIEnvironment::nThreads > 1) {
+        // Shared by the workers so every link fails at the same moment: the point
+        // of these threaded bodies is the one global recovery thread facing several
+        // broken communicators, which staggered failures would not produce.
+        std::atomic<int> atFailure{0};
+        RunMultiThreadedIndependent(
+            mergedDev, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                static constexpr int kThreadedReqs = 4;
+                const size_t size = 4096;
+                // One slice per in-flight message, plus one for the warmup.
+                const size_t bufSize = size * (kThreadedReqs + 1);
+                void* buffer = malloc(bufSize);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, bufSize, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 1200, mhandle,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                // This test is about requests already in flight when the link
+                // dies, so the fault lands after every message is posted.
+                return WorkerCastFailoverInFlight(rank, pair, buffer, size, 1210, mhandle,
+                                                  WorkerSeed(threadIdx, 1), kThreadedReqs,
+                                                  &atFailure, MPIEnvironment::nThreads);
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
+
     void* listenComm = nullptr;
     void* sendComm   = nullptr;
     void* recvComm   = nullptr;
@@ -1730,6 +2055,172 @@ TEST_F(NetIbMPITest, RecoverySuccessRestoresTraffic) {
         GTEST_SKIP() << "Requires NIC Fusion (ndevs >= 2). Found " << totalDevs << " physical devices.";
     }
 
+    // Parameterized by MPIEnvironment::nThreads. Recovery assertions stay
+    // per-communicator, but the recovery thread and its inbox are process-global,
+    // so N simultaneous failures are the only way to see it serve several
+    // connections. The poll budget is generous for exactly that reason.
+    if (MPIEnvironment::nThreads > 1) {
+        // Shared by the workers so every link fails at the same moment: the point
+        // of these threaded bodies is the one global recovery thread facing several
+        // broken communicators, which staggered failures would not produce.
+        std::atomic<int> atFailure{0};
+        RunMultiThreadedIndependent(
+            mergedDev, MPIEnvironment::nThreads,
+            [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+                ThreadResult result;
+                // One message, not a run of them. With more, the two sides have been
+                // seen to drift a message apart after recovery -- the sender
+                // exhausting its FIFO-slot retries on message n+1 while the receiver
+                // still waits for n, with both devices reported healthy -- from the
+                // second message onward. How often is deliberately not stated here:
+                // the earlier figure was measured before the recovery wait required
+                // recoveryCount > 0, so a green run could accept device 0's initial
+                // Ok without recovery having happened at all. PostRecoveryPingPongHoldsSync
+                // sends ten and carries the finding; one message here still proves
+                // that traffic resumes on the recovered connection.
+                static constexpr int kThreadedPostRecoveryMsgs = 1;
+                static constexpr int kRecoveryPollIterations = 6000;  // 6000 * 10ms = 60s
+                // The receiver has no way to learn when the sender leaves the
+                // recovery poll: the serial body uses an MPI handshake, which a
+                // worker cannot call. So the first post-recovery message has to
+                // wait out the sender's whole poll budget on top of its own.
+                static constexpr int kFirstPostRecoveryTimeoutMs =
+                    kRecoveryPollIterations * (kPollIntervalUs / 1000) + kLargeTransferTimeoutMs;
+                const size_t size = 8192;
+                void* buffer = malloc(size);
+                if (!buffer) {
+                    result.ok = false;
+                    result.msg = "malloc failed";
+                    return result;
+                }
+                auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+                void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+                void* mhandle = nullptr;
+                result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+                if (!result.ok) return result;
+                NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                                   NetMHandleWorkerDeleter(net_, workerComm));
+
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 1300, mhandle,
+                                               WorkerSeed(threadIdx, 0));
+                if (!result.ok) return result;
+
+                // Both directions lose QP 0 while the connection is idle -- the
+                // helper breaks the queue pairs first and only then transfers, which
+                // is the deliberate difference from the serial body, whose in-flight
+                // break needs an MPI handshake a worker cannot make. Both sides still
+                // have to notice and enter recovery, and the payload has to ride the
+                // surviving device.
+                //
+                // Gated so the failures land together: this test's claim is about one
+                // global recovery thread facing several broken communicators, and the
+                // start gate only synchronizes entry into the body.
+                if (!WorkerRendezvous(atFailure, MPIEnvironment::nThreads, 3000)) {
+                    result.ok = false;
+                    result.msg = "workers did not all reach the link failure together";
+                    return result;
+                }
+                result = WorkerTransferAcrossQpFailure(rank, pair, buffer, size, 1301, mhandle,
+                                                      WorkerSeed(threadIdx, 1),
+                                                      kLargeTransferTimeoutMs);
+                if (!result.ok) {
+                    result.msg = "failover transfer after the link failure: " + result.msg;
+                    return result;
+                }
+
+                if (rank == 1) {
+                    // Failover was supposed to absorb the QP error, as the serial
+                    // body asserts after its own phase 1.
+                    const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+                    if (fatalCount != 0) {
+                        result.ok = false;
+                        result.msg = "failover left " + std::to_string(fatalCount)
+                                     + " fatal errors on the connection";
+                        return result;
+                    }
+                }
+
+                if (rank == 1) {
+                    // Wait for the global recovery thread to bring device 0 back.
+                    bool recovered = false;
+                    int lastState = -1;
+                    int recoveries = 0;
+                    for (int poll = 0; poll < kRecoveryPollIterations; poll++) {
+                        struct ncclIbCastResiliencyState state = {};
+                        if (ncclIbCastGetResiliencyState(pair.sendComm, &state) != ncclSuccess) {
+                            result.ok = false;
+                            result.msg = "ncclIbCastGetResiliencyState failed while waiting for "
+                                         "recovery";
+                            return result;
+                        }
+                        lastState = state.devState[0];
+                        recoveries = state.recoveryCount[0];
+                        // Ok is also device 0's state before anything happened, so accepting
+                        // it on its own would call the communicator recovered on a run where
+                        // the injected failure was never observed -- and the traffic below
+                        // would then prove nothing. recoveryCount separates the two.
+                        if (lastState == kDevStateRecovered
+                            || (lastState == kDevStateOk && recoveries > 0)) {
+                            recovered = true;
+                            break;
+                        }
+                        if (lastState == kDevStateRecoveryFailed
+                            || lastState == kDevStateErrorPermanent) {
+                            break;
+                        }
+                        usleep(kPollIntervalUs);
+                    }
+                    if (!recovered) {
+                        result.ok = false;
+                        result.msg = "device 0 never reported a completed recovery; last "
+                                     "state was " + std::to_string(lastState)
+                                     + " with recoveryCount=" + std::to_string(recoveries);
+                        return result;
+                    }
+                }
+
+                // Traffic must flow again on the recovered connection.
+                for (int i = 0; i < kThreadedPostRecoveryMsgs; i++) {
+                    result = WorkerSendRecvPattern(rank, pair, buffer, size, 1310 + i, mhandle,
+                                                   WorkerSeed(threadIdx, 10 + i),
+                                                   (i == 0) ? kFirstPostRecoveryTimeoutMs
+                                                            : kLargeTransferTimeoutMs);
+                    if (!result.ok) {
+                        // This phase has been seen to fail once in a full matrix run and never
+                        // in isolation, with both ranks bounded at their own budgets waiting for
+                        // each other, so the device state at the moment of failure is what the
+                        // next occurrence needs to be diagnosable.
+                        result.msg = "post-recovery traffic, message " + std::to_string(i) + ": "
+                                     + result.msg;
+                        if (rank == 1) {
+                            struct ncclIbCastResiliencyState state = {};
+                            if (ncclIbCastGetResiliencyState(pair.sendComm, &state)
+                                == ncclSuccess) {
+                                result.msg += "; devState[0]=" + std::to_string(state.devState[0])
+                                              + " devState[1]=" + std::to_string(state.devState[1]);
+                            }
+                        }
+                        return result;
+                    }
+                }
+
+                if (rank == 1) {
+                    // Sustained traffic after recovery must stay clean too, which
+                    // is the serial body's closing assertion.
+                    const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+                    if (fatalCount != 0) {
+                        result.ok = false;
+                        result.msg = "post-recovery traffic reported " + std::to_string(fatalCount)
+                                     + " fatal errors";
+                    }
+                }
+                return result;
+            });
+        MPI_Barrier(MPI_COMM_WORLD);
+        return;
+    }
+
     void* listenComm = nullptr;
     void* sendComm   = nullptr;
     void* recvComm   = nullptr;
@@ -1921,6 +2412,195 @@ TEST_F(NetIbMPITest, RecoverySuccessRestoresTraffic) {
     }
 
     TeardownConnection(recvComm, listenComm, sendComm, mhandle);
+}
+
+// =============================================================================
+// Test: PostRecoveryPingPongHoldsSync
+//
+// Tracks an open finding rather than a feature, and is the reason it is a test at
+// all: after QP 0 has been driven to error on both sides and the recovery thread
+// reports device 0 healthy again, a run of blocking ping-pong messages on the
+// recovered connection gets the two ranks one message apart. The sender exhausts
+// its FIFO-slot retries posting message n+1 while the receiver is still waiting
+// for n, both devices reported Ok, from the second message onward. Seen at two
+// workers on mia1, and every run of a variant that breaks only the sender's queue
+// pair with a request in flight.
+//
+// No rate is quoted on purpose. The earlier one was measured before this test's
+// recovery wait required recoveryCount > 0, when a green run could accept device
+// 0's initial Ok state without recovery having been exercised, so it says nothing
+// about the corrected test. This is what the nightly runs are for.
+//
+// RecoverySuccessRestoresTraffic therefore sends one message after recovery, so
+// it can gate a merge; this test sends ten and asserts they all arrive, so the
+// drift is a failure somewhere rather than a note in a document. It runs in the
+// nightly plan only -- suite "A20. Nightly - ..." in ainic.json, which the
+// label-gated PR subset does not select -- because it is expected to fail some
+// runs until the plugin side is fixed, and a PR author cannot act on that.
+//
+// What reproduces it is not pinned down yet, which is the other reason it belongs
+// in a nightly rather than a gate: on a quiet node, run on its own, it passes
+// repeatedly. Whatever the trigger is, it is not the ten messages by themselves.
+//
+// The serial body of RecoverySuccessRestoresTraffic sends its own run of messages
+// and does not drift: it puts an MPI handshake between phases, which
+// resynchronizes the two sides. A worker cannot call one, which is why the
+// threaded path is where this shows up.
+// =============================================================================
+TEST_F(NetIbMPITest, PostRecoveryPingPongHoldsSync) {
+    ASSERT_TRUE(validateTestPrerequisites(kExactTwoProcesses, kExactTwoProcesses,
+                                         false, kMinGpusPerNode, kNoNodeLimit))
+        << "Test requires exactly " << kExactTwoProcesses << " processes";
+
+    const char* failoverEnv = getenv("NCCL_IB_RESILIENCY_PORT_FAILOVER");
+    const char* recoveryEnv = getenv("NCCL_IB_RESILIENCY_PORT_RECOVERY");
+    if (!failoverEnv || strcmp(failoverEnv, "1") != 0) {
+        GTEST_SKIP() << "Requires NCCL_IB_RESILIENCY_PORT_FAILOVER=1";
+    }
+    if (!recoveryEnv || strcmp(recoveryEnv, "1") != 0) {
+        GTEST_SKIP() << "Requires NCCL_IB_RESILIENCY_PORT_RECOVERY=1";
+    }
+    const int nThreads = MPIEnvironment::nThreads;
+    if (nThreads < 2) {
+        GTEST_SKIP() << "Requires --net_ib_nthreads of at least 2: the drift needs a worker, "
+                        "which cannot use the MPI handshakes that hide it";
+    }
+
+    const int rank = MPIEnvironment::world_rank;
+    net_ = &netIbCast;
+    int totalDevs = 0;
+    AssertInitAndGetDevices(&totalDevs);
+
+    int mergedDev = CreateMergedDeviceForFailover(net_, totalDevs);
+    if (mergedDev < 0) {
+        GTEST_SKIP() << "Requires NIC Fusion (ndevs >= 2). Found " << totalDevs
+                     << " physical devices.";
+    }
+
+    static constexpr int    kPostRecoveryMsgs = 10;
+    static constexpr int    kRecoveryPollIterations = 6000;  // 6000 * 10ms = 60s
+    // The receiver cannot learn when the sender leaves its recovery poll, so the
+    // first post-recovery message has to wait out that whole budget as well.
+    static constexpr int    kFirstMsgTimeoutMs =
+        kRecoveryPollIterations * (kPollIntervalUs / 1000) + kLargeTransferTimeoutMs;
+    static constexpr size_t kMsgSize = 8192;
+
+    // Shared so both workers break their links at the same moment: recoveries that
+    // do not overlap are a different situation from the one being tracked.
+    std::atomic<int> atFailure{0};
+
+    RunMultiThreadedIndependent(
+        mergedDev, nThreads, [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+            ThreadResult result;
+            void* buffer = malloc(kMsgSize);
+            if (!buffer) {
+                result.ok = false;
+                result.msg = "malloc failed";
+                return result;
+            }
+            auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+            void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+            void* mhandle = nullptr;
+            result = WorkerRegister(workerComm, buffer, kMsgSize, NCCL_PTR_HOST, &mhandle);
+            if (!result.ok) return result;
+            NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                               NetMHandleWorkerDeleter(net_, workerComm));
+
+            result = WorkerSendRecvPattern(rank, pair, buffer, kMsgSize, 1400, mhandle,
+                                           WorkerSeed(threadIdx, 0));
+            if (!result.ok) return result;
+
+            // Both directions lose QP 0 while the connection is idle: the helper
+            // breaks the queue pairs first and transfers afterwards. Both sides
+            // notice, enter recovery, and the payload rides the survivor.
+            if (!WorkerRendezvous(atFailure, nThreads, 3000)) {
+                result.ok = false;
+                result.msg = "workers did not all reach the link failure together";
+                return result;
+            }
+            result = WorkerTransferAcrossQpFailure(rank, pair, buffer, kMsgSize, 1401, mhandle,
+                                                   WorkerSeed(threadIdx, 1),
+                                                   kLargeTransferTimeoutMs);
+            if (!result.ok) {
+                result.msg = "failover transfer after the link failure: " + result.msg;
+                return result;
+            }
+
+            if (rank == 1) {
+                bool recovered = false;
+                int  lastState = -1;
+                int  recoveries = 0;
+                for (int poll = 0; poll < kRecoveryPollIterations; poll++) {
+                    struct ncclIbCastResiliencyState state = {};
+                    if (ncclIbCastGetResiliencyState(pair.sendComm, &state) != ncclSuccess) {
+                        result.ok = false;
+                        result.msg = "ncclIbCastGetResiliencyState failed while waiting for "
+                                     "recovery";
+                        return result;
+                    }
+                    lastState = state.devState[0];
+                    recoveries = state.recoveryCount[0];
+                    // Ok is also device 0's state before anything happened, so accepting
+                    // it on its own would call the communicator recovered on a run where
+                    // the injected failure was never observed -- and the traffic below
+                    // would then prove nothing. recoveryCount separates the two.
+                    if (lastState == kDevStateRecovered
+                        || (lastState == kDevStateOk && recoveries > 0)) {
+                        recovered = true;
+                        break;
+                    }
+                    if (lastState == kDevStateRecoveryFailed
+                        || lastState == kDevStateErrorPermanent) {
+                        break;
+                    }
+                    usleep(kPollIntervalUs);
+                }
+                if (!recovered) {
+                    result.ok = false;
+                    result.msg = "device 0 never reported a completed recovery; last "
+                                 "state was " + std::to_string(lastState)
+                                 + " with recoveryCount=" + std::to_string(recoveries);
+                    return result;
+                }
+            }
+
+            // The claim under test: a recovered connection carries a run of
+            // blocking messages without the two sides losing each other.
+            for (int i = 0; i < kPostRecoveryMsgs; i++) {
+                result = WorkerSendRecvPattern(rank, pair, buffer, kMsgSize, 1410 + i, mhandle,
+                                               WorkerSeed(threadIdx, 10 + i),
+                                               (i == 0) ? kFirstMsgTimeoutMs
+                                                        : kLargeTransferTimeoutMs);
+                if (!result.ok) {
+                    result.msg = "post-recovery message " + std::to_string(i) + " of "
+                                 + std::to_string(kPostRecoveryMsgs) + ": " + result.msg;
+                    if (rank == 1) {
+                        struct ncclIbCastResiliencyState state = {};
+                        if (ncclIbCastGetResiliencyState(pair.sendComm, &state) == ncclSuccess) {
+                            result.msg += "; devState[0]=" + std::to_string(state.devState[0])
+                                          + " devState[1]=" + std::to_string(state.devState[1])
+                                          + " (both Ok here is the drift, not a link failure)";
+                        }
+                        result.msg += "; fatalCount="
+                                      + std::to_string(WorkerCastFatalCount(pair.sendComm));
+                    }
+                    return result;
+                }
+            }
+
+            if (rank == 1) {
+                const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+                if (fatalCount != 0) {
+                    result.ok = false;
+                    result.msg = "sustained post-recovery traffic left " + std::to_string(fatalCount)
+                                 + " fatal errors on the connection";
+                }
+            }
+            return result;
+        });
+
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 // =============================================================================
@@ -3295,6 +3975,183 @@ TEST_F(NetIbMPITest, FaultInjectionShimsAbsentUnlessRequested) {
 
     MPI_Barrier(MPI_COMM_WORLD);
     TeardownConnection(recvComm, listenComm, sendComm, mhandle);
+}
+
+// =============================================================================
+// Test: FaultIsolationAcrossWorkers
+//
+// Multithread-only. One worker arms error injection on its own connection and
+// must observe the failure; every other worker keeps transferring on its own
+// connection and must stay clean, with a fatal count of zero.
+//
+// This is the assertion the serial tests cannot make: injected state lives in
+// ncclIbNetCommBase, so a broken connection must not disturb its siblings on the
+// same device. It also puts a failing connection and healthy traffic on one NIC
+// at the same time, which is how a real process behaves when one link dies.
+// =============================================================================
+TEST_F(NetIbMPITest, FaultIsolationAcrossWorkers) {
+    ASSERT_TRUE(validateTestPrerequisites(kExactTwoProcesses, kExactTwoProcesses,
+                                         false, kMinGpusPerNode, kNoNodeLimit))
+        << "Test requires exactly " << kExactTwoProcesses << " processes";
+
+    CAST_ENV_CHECK_OR_SKIP();
+
+    const int rank = MPIEnvironment::world_rank;
+    const int nThreads = MPIEnvironment::nThreads;
+    if (nThreads < 2) {
+        GTEST_SKIP() << "requires --net_ib_nthreads greater than one: the whole point is one "
+                        "failing connection alongside healthy ones";
+    }
+
+    net_ = &netIbCast;
+    AssertInitAndGetDevices(nullptr);
+
+    static constexpr int kHealthyTransfers = 10;
+    // The isolation claim only means something while the fault is live, and the
+    // worker gate synchronizes nothing beyond entry into the body. So the
+    // bystanders wait for the victim to report its fault armed, the victim then
+    // waits for all of them to finish their healthy traffic before clearing it,
+    // and only then do they read the fatal count. Without the second wait the
+    // victim could arm, fail, clear and finish before any bystander was
+    // scheduled, and the count would be read on a fabric where no fault ever
+    // lived.
+    std::atomic<bool> faultArmed{false};
+    std::atomic<bool> victimFinished{false};
+    std::atomic<int>  bystandersDone{0};
+    const int kBystanders = nThreads - 1;
+    // Bounded, so a victim that dies before arming cannot hang its siblings.
+    static constexpr int kFlagPollIterations = 3000;  // 3000 * 10ms = 30s
+    auto waitForFlag = [](std::atomic<bool>& flag, int pollIterations) {
+        for (int poll = 0; poll < pollIterations; poll++) {
+            if (flag.load(std::memory_order_acquire)) return true;
+            usleep(kPollIntervalUs);
+        }
+        return false;
+    };
+
+    RunMultiThreadedIndependent(
+        0, nThreads, [&](int threadIdx, ConnectionPair& pair) -> ThreadResult {
+            ThreadResult result;
+            const size_t size = 1024;
+            void* buffer = malloc(size);
+            if (!buffer) {
+                result.ok = false;
+                result.msg = "malloc failed";
+                return result;
+            }
+            auto bufferGuard = makeHostBufferAutoGuard(buffer);
+
+            void* workerComm = (rank == 0) ? pair.recvComm : pair.sendComm;
+            void* mhandle = nullptr;
+            result = WorkerRegister(workerComm, buffer, size, NCCL_PTR_HOST, &mhandle);
+            if (!result.ok) return result;
+            NetMHandleWorkerGuard mhandleGuard(mhandle,
+                                               NetMHandleWorkerDeleter(net_, workerComm));
+
+            // Every worker starts from a working connection.
+            result = WorkerSendRecvPattern(rank, pair, buffer, size, 800, mhandle,
+                                           WorkerSeed(threadIdx, 0));
+            if (!result.ok) return result;
+
+            const bool victim = (threadIdx == 0);
+            if (victim) {
+                // Releases the siblings on every exit, including the failure
+                // paths, so they never wait on a victim that already gave up.
+                struct FaultWindow {
+                    std::atomic<bool>& armed;
+                    std::atomic<bool>& finished;
+                    ~FaultWindow() {
+                        armed.store(true, std::memory_order_release);
+                        finished.store(true, std::memory_order_release);
+                    }
+                } window{faultArmed, victimFinished};
+
+                if (rank == 0) {
+                    // Posting this receive is what lets the peer reach the injected
+                    // error, so it is the local point where the fault window opens.
+                    // Nothing will complete it, so it is flushed before the worker
+                    // unwinds its registration.
+                    void* request = nullptr;
+                    result = WorkerPostRecv(pair.recvComm, buffer, size, 801, mhandle, &request);
+                    if (!result.ok) return result;
+                    faultArmed.store(true, std::memory_order_release);
+                    if (WorkerDrainRecv(request, 100)) return result;
+                    return WorkerCastFlushAbandonedRecv(pair.recvComm, request);
+                }
+
+                int liveNqps = 0;
+                result = WorkerCastLiveNqps(pair.sendComm, &liveNqps);
+                if (!result.ok) return result;
+
+                result = WorkerCastFaultArmError(pair.sendComm, liveNqps);
+                if (!result.ok) return result;
+                faultArmed.store(true, std::memory_order_release);
+
+                const WorkerFaultSendOutcome outcome =
+                    WorkerCastFaultSend(pair.sendComm, buffer, size, 801, mhandle, 200);
+                if (outcome.sendRet == ncclSuccess && outcome.fatalCount <= 0) {
+                    result.ok = false;
+                    result.msg = "the victim connection did not observe its injected fault";
+                    return result;
+                }
+
+                // Hold the fault until the bystanders have finished, so their
+                // traffic really did share the device with a broken connection.
+                for (int poll = 0; poll < kFlagPollIterations; poll++) {
+                    if (bystandersDone.load(std::memory_order_acquire) >= kBystanders) break;
+                    usleep(kPollIntervalUs);
+                }
+                if (bystandersDone.load(std::memory_order_acquire) < kBystanders) {
+                    result.ok = false;
+                    result.msg = "only " + std::to_string(bystandersDone.load())
+                                 + " of " + std::to_string(kBystanders)
+                                 + " bystander workers finished while the fault was armed";
+                    return result;
+                }
+
+                return WorkerCastFaultClear(pair.sendComm);
+            }
+
+            // Bystanders must be untouched by the victim's failure, and their
+            // traffic has to run while that fault is live.
+            if (!waitForFlag(faultArmed, kFlagPollIterations)) {
+                result.ok = false;
+                result.msg = "the victim worker never reported its fault as armed";
+                return result;
+            }
+            for (int i = 0; i < kHealthyTransfers; i++) {
+                result = WorkerSendRecvPattern(rank, pair, buffer, size, 810 + i, mhandle,
+                                               WorkerSeed(threadIdx, i), kLargeTransferTimeoutMs);
+                if (!result.ok) {
+                    result.msg = "bystander worker disturbed by another worker's fault: "
+                                 + result.msg;
+                    // Counted even on failure: the victim is waiting for this, and
+                    // its own timeout would bury the real error under a second one.
+                    bystandersDone.fetch_add(1, std::memory_order_release);
+                    return result;
+                }
+            }
+            bystandersDone.fetch_add(1, std::memory_order_release);
+
+            if (rank == 1) {
+                // Read the count only once the victim is finished, so it covers
+                // the whole time the fault was live.
+                if (!waitForFlag(victimFinished, kFlagPollIterations)) {
+                    result.ok = false;
+                    result.msg = "the victim worker never finished";
+                    return result;
+                }
+                const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+                if (fatalCount != 0) {
+                    result.ok = false;
+                    result.msg = "bystander connection reports " + std::to_string(fatalCount)
+                                 + " fatal errors after a sibling connection failed";
+                }
+            }
+            return result;
+        });
+
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 #endif /* MPI_TESTS_ENABLED && ENABLE_FAULT_INJECTION */

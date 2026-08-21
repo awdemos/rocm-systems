@@ -1356,6 +1356,347 @@ protected:
         return result;
     }
 
+
+#if defined(ENABLE_FAULT_INJECTION)
+    // ── Worker-safe IB-CAST fault injection ──────────────────────────
+    // The pre-call intercept hooks store their state in the communicator
+    // (faultQpDelayUs / faultQpError in ncclIbNetCommBase), so a worker can
+    // break its own connection without touching anybody else's. The
+    // libibverbs-level ops registry is process-global and deliberately not
+    // used here.
+
+    ThreadResult WorkerCastFaultArmError(void* sendComm, int nqps) {
+        ThreadResult result;
+        for (int qp = 0; qp < nqps; qp++) {
+            if (ncclIbCastFaultSetQpError(sendComm, qp, /*inject=*/true) != ncclSuccess) {
+                result.ok = false;
+                result.msg = "ncclIbCastFaultSetQpError failed on QP " + std::to_string(qp);
+                return result;
+            }
+        }
+        return result;
+    }
+
+    ThreadResult WorkerCastFaultSetDelay(void* sendComm, int qpIdx, uint32_t delayUs) {
+        ThreadResult result;
+        if (ncclIbCastFaultSetQpDelay(sendComm, qpIdx, delayUs) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastFaultSetQpDelay failed";
+        }
+        return result;
+    }
+
+    ThreadResult WorkerCastFaultClear(void* sendComm) {
+        ThreadResult result;
+        if (ncclIbCastFaultClear(sendComm) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastFaultClear failed";
+        }
+        return result;
+    }
+
+    int WorkerCastFatalCount(void* sendComm) {
+        int count = 0;
+        if (ncclIbCastFaultGetFatalCount(sendComm, &count) != ncclSuccess) return -1;
+        return count;
+    }
+
+    ThreadResult WorkerCastDriveQpToError(void* sendComm, int qpIdx) {
+        ThreadResult result;
+        if (ncclIbCastFaultDriveQpToError(sendComm, qpIdx) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastFaultDriveQpToError failed";
+        }
+        return result;
+    }
+
+    // Post one send and poll it, treating both a failed isend and a fatal error
+    // count as an outcome rather than a test failure. Used by fault tests that
+    // accept either signal.
+    struct WorkerFaultSendOutcome {
+        ncclResult_t sendRet = ncclSuccess;
+        bool         completed = false;
+        int          fatalCount = 0;
+    };
+
+    WorkerFaultSendOutcome WorkerCastFaultSend(void* sendComm, void* buffer, size_t size, int tag,
+                                               void* mhandle, int pollIterations) {
+        WorkerFaultSendOutcome outcome;
+        void* request = nullptr;
+        for (int attempt = 0; attempt < kMaxRetryAttempts; attempt++) {
+            outcome.sendRet = PostSend(sendComm, buffer, size, tag, mhandle, &request);
+            if (outcome.sendRet != ncclSuccess || request != nullptr) break;
+            usleep(kPollIntervalUs);
+        }
+        outcome.fatalCount = WorkerCastFatalCount(sendComm);
+
+        if (outcome.sendRet == ncclSuccess && request != nullptr) {
+            for (int poll = 0; poll < pollIterations; poll++) {
+                int done = 0;
+                int sizes[1] = {0};
+                const ncclResult_t testRet = TestRequest(request, &done, sizes);
+                if (testRet != ncclSuccess) {
+                    outcome.sendRet = testRet;
+                    break;
+                }
+                outcome.fatalCount = WorkerCastFatalCount(sendComm);
+                if (done) {
+                    outcome.completed = true;
+                    break;
+                }
+                if (outcome.fatalCount > 0) break;
+                usleep(kPollIntervalUs);
+            }
+        }
+        return outcome;
+    }
+
+    // Shared worker body for the failover tests: drive the sender's QP 0 into
+    // the error state, then require the payload to still arrive over the
+    // surviving device of a fused NIC, with no fatal error and a device state
+    // that is no longer Ok. Resiliency state is per communicator, so N workers
+    // can fail their own links at once; what they share is the single global
+    // recovery thread, which is exactly what concurrency here exercises.
+    ThreadResult WorkerCastFailoverTransfer(int rank, ConnectionPair& pair, void* buffer,
+                                            size_t size, int tag, void* mhandle, int seed,
+                                            int messages = 1, std::atomic<int>* arrived = nullptr,
+                                            int expected = 0) {
+        ThreadResult result;
+        // Without a gate here the failures are merely started from several workers,
+        // not concurrent: each worker allocates, registers and warms up first, so a
+        // fast one can be through failover before a slow one reaches this line, and
+        // the claim about the single global recovery thread serving several broken
+        // communicators at once goes untested. Bounded, and a timeout is reported
+        // rather than asserted, since a worker cannot fail the test alone.
+        if (arrived && expected > 1
+            && !WorkerRendezvous(*arrived, expected, kFailureGatePolls)) {
+            result.ok = false;
+            result.msg = "workers did not all reach the link failure together";
+            return result;
+        }
+        if (rank == 1) {
+            result = WorkerCastDriveQpToError(pair.sendComm, 0);
+            if (!result.ok) return result;
+        }
+
+        for (int i = 0; i < messages; i++) {
+            result = WorkerSendRecvPattern(rank, pair, buffer, size, tag + i, mhandle, seed + i,
+                                           kLargeTransferTimeoutMs);
+            if (!result.ok) {
+                result.msg = "after driving QP 0 to error: " + result.msg;
+                return result;
+            }
+        }
+
+        if (rank != 1) return result;
+
+        const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+        if (fatalCount != 0) {
+            result.ok = false;
+            result.msg = "failover should have handled the QP error, but the fatal count is "
+                         + std::to_string(fatalCount);
+            return result;
+        }
+
+        struct ncclIbCastResiliencyState state = {};
+        if (ncclIbCastGetResiliencyState(pair.sendComm, &state) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastGetResiliencyState failed";
+            return result;
+        }
+        // 0 is ncclIbResiliencyDevStateOk; anything else means the failure was
+        // registered (Error, RecoveryInProgress or Recovered).
+        if (state.devState[0] == 0) {
+            result.ok = false;
+            result.msg = "device 0 still reports Ok after its QP was driven to error";
+        }
+        return result;
+    }
+
+    // Bounded gate for the failure point: 30 s is well past the setup a sibling
+    // still has to finish, and a worker that already failed must not hang the rest.
+    static constexpr int kFailureGatePolls = 3000;  // 3000 * 10ms
+
+    // Failover with requests already in flight: post every message first, then
+    // break QP 0 under them, then require all of them to complete. Because isend
+    // only gets a request once the receiver has published a FIFO slot, "all sends
+    // posted" already implies "all receives posted", which is the ordering the
+    // serial test buys with a barrier the worker cannot use.
+    //
+    // buffer must hold messages * size bytes; each message uses its own slice so
+    // completions cannot be confused with each other.
+    ThreadResult WorkerCastFailoverInFlight(int rank, ConnectionPair& pair, void* buffer,
+                                            size_t size, int tag, void* mhandle, int seed,
+                                            int messages, std::atomic<int>* arrived = nullptr,
+                                            int expected = 0) {
+        ThreadResult result;
+        std::vector<void*> requests(messages, nullptr);
+
+        // Hold the sends outstanding until the queue pair is actually broken.
+        // Posting them is not enough on its own: a few KiB retire in hardware
+        // quickly enough that the earlier requests can be complete before the last
+        // one is posted, and the test would then pass while nothing crossed the
+        // failure. The delay lives in the communicator's pre-call hook, so it slows
+        // this worker's QP 0 and nobody else's.
+        static constexpr uint32_t kHoldInFlightUs = 200000;  // 200ms
+        if (rank == 1) {
+            result = WorkerCastFaultSetDelay(pair.sendComm, /*qpIdx=*/0, kHoldInFlightUs);
+            if (!result.ok) return result;
+        }
+
+        for (int i = 0; i < messages; i++) {
+            char* slice = static_cast<char*>(buffer) + static_cast<size_t>(i) * size;
+            if (rank == 0) {
+                memset(slice, 0, size);
+                result = WorkerPostRecv(pair.recvComm, slice, size, tag + i, mhandle,
+                                        &requests[i]);
+            } else {
+                fillHostBufferWithPattern<uint8_t>(slice, size, makeBytePattern(seed + i));
+                result = WorkerPostSend(pair.sendComm, slice, size, tag + i, mhandle,
+                                        &requests[i]);
+            }
+            if (!result.ok) return result;
+        }
+
+        // Same gate as WorkerCastFailoverTransfer, and needed for the same reason:
+        // posting several requests takes a variable amount of time, so without it one
+        // communicator can be through failover before another breaks its queue pair.
+        if (arrived && expected > 1
+            && !WorkerRendezvous(*arrived, expected, kFailureGatePolls)) {
+            result.ok = false;
+            result.msg = "workers did not all reach the link failure together";
+            return result;
+        }
+
+        if (rank == 1) {
+            result = WorkerCastDriveQpToError(pair.sendComm, 0);
+            if (!result.ok) return result;
+            // The delay armed before the sends is what made "in flight" true: 4 KiB
+            // writes can retire in hardware before the last one is even posted, so
+            // without it the test could pass with only the final request -- or none
+            // -- actually crossing the failure. Clear it once the QP is broken.
+            result = WorkerCastFaultClear(pair.sendComm);
+            if (!result.ok) return result;
+        }
+
+        for (int i = 0; i < messages; i++) {
+            int sizes[1] = {0};
+            result = WorkerWait(requests[i], sizes, kLargeTransferTimeoutMs);
+            if (!result.ok) {
+                result.msg = "request " + std::to_string(i)
+                             + " never completed after QP 0 was driven to error";
+                return result;
+            }
+            if (rank != 0) continue;
+
+            char* slice = static_cast<char*>(buffer) + static_cast<size_t>(i) * size;
+            if (sizes[0] != (int)size
+                || !verifyHostBufferData<uint8_t>(slice, size, makeBytePattern(seed + i))) {
+                result.ok = false;
+                result.msg = "message " + std::to_string(i)
+                             + " arrived corrupted or short after failover";
+                return result;
+            }
+        }
+
+        if (rank != 1) return result;
+
+        const int fatalCount = WorkerCastFatalCount(pair.sendComm);
+        if (fatalCount != 0) {
+            result.ok = false;
+            result.msg = "failover should have absorbed the QP error, but the fatal count is "
+                         + std::to_string(fatalCount);
+        }
+        return result;
+    }
+
+    // Poll a receive the peer may never satisfy, and report whether it finished.
+    bool WorkerDrainRecv(void* request, int pollIterations) {
+        if (!request) return true;
+        for (int poll = 0; poll < pollIterations; poll++) {
+            int done = 0;
+            int sizes[1] = {0};
+            if (TestRequest(request, &done, sizes) != ncclSuccess) return false;
+            if (done) return true;
+            usleep(kPollIntervalUs);
+        }
+        return false;
+    }
+
+    // Releases a receive that the peer's injected send will never satisfy.
+    //
+    // Two things make this necessary rather than tidy. The work request keeps
+    // referencing the receive buffer's memory region until the queue pair is
+    // destroyed, which happens after the worker has already had to deregister it,
+    // and deregistration cannot wait for the close because it needs the
+    // communicator that the close frees. Nor can the transfer simply be finished:
+    // the failed send consumed the FIFO slot this receive was matched to, so no
+    // later send can complete it.
+    //
+    // Driving this side's queue pairs to error is what breaks the tie. The NIC
+    // completes the outstanding work request with a flush status, so nothing
+    // references the region by the time the worker unwinds. The connection is
+    // spent either way -- it exists in these tests to be broken.
+    ThreadResult WorkerCastFlushAbandonedRecv(void* recvComm, void* request) {
+        ThreadResult result;
+        if (!request) return result;
+
+        // The API rejects an index past the connection's QP count, which is how
+        // the loop learns where to stop.
+        static constexpr int kQpProbeLimit = 64;
+        for (int qp = 0; qp < kQpProbeLimit; qp++) {
+            if (ncclIbCastFaultDriveRecvQpToError(recvComm, qp) != ncclSuccess) break;
+        }
+
+        // A flush completion surfaces as an error, and that is the expected
+        // outcome here: all that matters is that the request stops being
+        // outstanding before the memory region goes away.
+        static constexpr int kFlushPolls = 500;  // 500 * 10ms = 5s
+        for (int poll = 0; poll < kFlushPolls; poll++) {
+            int done = 0;
+            int sizes[1] = {0};
+            if (TestRequest(request, &done, sizes) != ncclSuccess) return result;
+            if (done) return result;
+            usleep(kPollIntervalUs);
+        }
+        result.ok = false;
+        result.msg = "the abandoned receive was still outstanding after its queue pairs were "
+                     "driven to error";
+        return result;
+    }
+
+    // Both sides lose QP 0 and the payload then has to ride the surviving device.
+    //
+    // The serial recovery test breaks the queue pairs with a transfer already in
+    // flight, so that failover rescues an outstanding request. A worker cannot
+    // reproduce that: the serial body coordinates the two sides with an MPI
+    // handshake around the break, and without one, both orders were measured to be
+    // unusable. Breaking both sides with the receive posted flushes that work
+    // request while the data still arrives over the surviving device, and the two
+    // sides run one message apart for the rest of the test (seen once in four full
+    // matrix runs, as the sender exhausting its FIFO-slot retries on message n+1
+    // while the receiver waited for message n). Breaking only the sender in flight
+    // and the receiver afterwards failed every one of nineteen consecutive runs.
+    // So the break happens while the connection is idle, and the difference from
+    // the serial body is stated in the test plan rather than papered over.
+    ThreadResult WorkerTransferAcrossQpFailure(int rank, ConnectionPair& pair, void* buffer,
+                                               size_t size, int tag, void* mhandle, int seed,
+                                               int timeoutMs) {
+        ThreadResult result;
+        if (rank == 0) {
+            if (ncclIbCastFaultDriveRecvQpToError(pair.recvComm, 0) != ncclSuccess) {
+                result.ok = false;
+                result.msg = "ncclIbCastFaultDriveRecvQpToError failed";
+                return result;
+            }
+        } else {
+            result = WorkerCastDriveQpToError(pair.sendComm, 0);
+            if (!result.ok) return result;
+        }
+        return WorkerSendRecvPattern(rank, pair, buffer, size, tag, mhandle, seed, timeoutMs);
+    }
+#endif /* ENABLE_FAULT_INJECTION */
+
     ncclResult_t InitNetIbCtx(void** ctxOut) {
         ncclNetCommConfig_t commConfig = {};
         commConfig.trafficClass = NCCL_NET_TRAFFIC_CLASS_UNDEF;
