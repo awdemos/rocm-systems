@@ -1208,6 +1208,154 @@ protected:
         return WorkerSendRecvPattern(rank, pair, buffer, size, tag, mhandle, seed, timeoutMs);
     }
 
+    // ── Worker-safe IB-CAST scheduler inspection ─────────────────────
+    // Token and cursor state is per send communicator, so a worker can arm and
+    // read its own connection without disturbing the others.
+
+    ThreadResult WorkerCastSetTokens(void* sendComm, const std::vector<int>& tokens) {
+        ThreadResult result;
+        if (ncclIbCastSetTokens(sendComm, tokens.data(), (int)tokens.size()) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastSetTokens failed";
+        }
+        return result;
+    }
+
+    ThreadResult WorkerCastGetSchedState(void* sendComm, struct ncclIbCastSchedState* out) {
+        ThreadResult result;
+        memset(out, 0, sizeof(*out));
+        if (ncclIbCastGetSchedState(sendComm, out) != ncclSuccess) {
+            result.ok = false;
+            result.msg = "ncclIbCastGetSchedState failed";
+        }
+        return result;
+    }
+
+    // QPs the connection actually uses. NCCL_IB_QPS_PER_CONNECTION states only a
+    // request: on a merged device the plugin creates that many per member, so
+    // arming faults from the environment would leave the remaining QPs healthy
+    // and "the send must fail" would depend on which QP the scheduler picked.
+    // Valid once the scheduler is warm, which the first successful send does.
+    ThreadResult WorkerCastLiveNqps(void* sendComm, int* nqps) {
+        struct ncclIbCastSchedState state;
+        ThreadResult result = WorkerCastGetSchedState(sendComm, &state);
+        if (!result.ok) return result;
+        if (state.nqps <= 0) {
+            result.ok = false;
+            result.msg = "scheduler reports nqps=" + std::to_string(state.nqps);
+            return result;
+        }
+        *nqps = state.nqps;
+        return result;
+    }
+
+    // The live QP count of a connection, agreed by both ranks, for threaded CAST
+    // branches to size their split thresholds with.
+    //
+    // NCCL_IB_QPS_PER_CONNECTION states a request: on a merged device the plugin
+    // creates that many per member, so the environment value is not what the
+    // connection uses, and a threshold computed from it lands on the wrong side of
+    // the split boundary. The serial bodies already ask the scheduler after a
+    // warm-up transfer and broadcast the answer; a worker cannot broadcast, so the
+    // main thread does it here on a throwaway connection before the workers start.
+    // Every connection on the device reports the same count.
+    int ThreadedCastAgreedNqps(int dev, int* nqps) {
+        void* listenComm = nullptr;
+        void* sendComm = nullptr;
+        void* recvComm = nullptr;
+        SetupCastConnection(dev, &listenComm, &sendComm, &recvComm);
+        if (!sendComm && !recvComm) return -1;
+
+        const int rank = MPIEnvironment::world_rank;
+        void* comm = (rank == 0) ? recvComm : sendComm;
+        std::vector<char> probe(128, 0);
+        void* mhandle = nullptr;
+        const int localOk =
+            RegisterMemory(comm, probe.data(), probe.size(), NCCL_PTR_HOST, &mhandle)
+                    == ncclSuccess
+                ? 1
+                : 0;
+        // Agreed before either side moves: a one-sided failure would otherwise send
+        // the failing rank into the teardown barrier while its peer waits inside
+        // GetActualNqps for traffic that is never coming, and the test would hang
+        // instead of reporting anything. TeardownConnection accepts a null handle.
+        int bothOk = 0;
+        if (MPI_Allreduce(&localOk, &bothOk, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD)
+            != MPI_SUCCESS) {
+            bothOk = 0;
+        }
+        if (!bothOk) {
+            TeardownConnection(recvComm, listenComm, sendComm, mhandle);
+            return -1;
+        }
+        *nqps = GetActualNqps(sendComm, recvComm, probe.data(), probe.size(), 1, mhandle);
+        TeardownConnection(recvComm, listenComm, sendComm, mhandle);
+        return *nqps > 0 ? 0 : -1;
+    }
+
+    // Warm the scheduler up (it initializes on the first send) and arm equal
+    // weights. nqps is the live count agreed on the main thread, so both ranks
+    // size their transfers the same way; the sender confirms its own connection
+    // reports it too.
+    ThreadResult WorkerCastPrepareTokens(int rank, ConnectionPair& pair, void* buffer,
+                                         void* mhandle, int nqps, int tag, int seed) {
+        ThreadResult result = WorkerSendRecvPattern(rank, pair, buffer, 64, tag, mhandle, seed);
+        if (!result.ok || rank != 1) return result;
+
+        // Token arithmetic in these tests is derived from the environment so the
+        // expected values are predictable, which only holds if the connection
+        // really uses that many QPs. Asking the scheduler here is what makes a
+        // mismatch a clear failure instead of a wrong expectation. Where the count
+        // drives an action rather than an expectation -- arming faults on every QP
+        // -- the live value is used directly instead.
+        int liveNqps = 0;
+        result = WorkerCastLiveNqps(pair.sendComm, &liveNqps);
+        if (!result.ok) return result;
+        if (liveNqps != nqps) {
+            // Both ranks sized their buffers from the value the main thread agreed,
+            // so a worker's connection reporting something else means the
+            // expectations below are about a different connection than the one
+            // carrying the data.
+            result.ok = false;
+            result.msg = "this worker's connection reports nqps=" + std::to_string(liveNqps)
+                         + " but the run agreed on " + std::to_string(nqps);
+            return result;
+        }
+        return WorkerCastSetTokens(pair.sendComm, EqualTokens(liveNqps));
+    }
+
+    // Worker-safe CAST transfer with a token-consumption expectation. Only the
+    // sender owns scheduler state, so it checks the delta while the receiver
+    // verifies the payload. Pass a negative delta to skip the token check.
+    ThreadResult WorkerCastTransferExpectTokens(int rank, ConnectionPair& pair, void* buffer,
+                                                size_t size, int tag, void* mhandle, int seed,
+                                                int expectedTokenDelta,
+                                                int timeoutMs = kLargeTransferTimeoutMs) {
+        struct ncclIbCastSchedState before = {};
+        ThreadResult result;
+        if (rank == 1) {
+            result = WorkerCastGetSchedState(pair.sendComm, &before);
+            if (!result.ok) return result;
+        }
+
+        result = WorkerSendRecvPattern(rank, pair, buffer, size, tag, mhandle, seed, timeoutMs);
+        if (!result.ok) return result;
+
+        if (rank == 1 && expectedTokenDelta >= 0) {
+            struct ncclIbCastSchedState after = {};
+            result = WorkerCastGetSchedState(pair.sendComm, &after);
+            if (!result.ok) return result;
+            const int delta = before.activeTotTokens - after.activeTotTokens;
+            if (delta != expectedTokenDelta) {
+                result.ok = false;
+                result.msg = "expected a WRR token delta of "
+                             + std::to_string(expectedTokenDelta) + " at size "
+                             + std::to_string(size) + ", observed " + std::to_string(delta);
+            }
+        }
+        return result;
+    }
+
     ncclResult_t InitNetIbCtx(void** ctxOut) {
         ncclNetCommConfig_t commConfig = {};
         commConfig.trafficClass = NCCL_NET_TRAFFIC_CLASS_UNDEF;
