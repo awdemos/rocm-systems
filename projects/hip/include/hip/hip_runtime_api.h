@@ -88,11 +88,109 @@ typedef struct hipUUID_t {
 //---
 // Common headers for both NVCC and HIP-Clang paths:
 
+/*
+ Versioning struct. Because each public API must use the versioned struct to
+ ensure ABI compatibility, we must typedef the actual struct name here.
+*/
+
+#if HIP_FORCE_API_VERSION < 600 || defined(HIP_ABI_IMPL)
+// This is an older version of hipDeviceProp_t
+// This struct is also kept in hip_device.cpp
+typedef struct hipDeviceProp_tR0000 {
+  char name[256];            ///< Device name.
+  size_t totalGlobalMem;     ///< Size of global memory region (in bytes).
+  size_t sharedMemPerBlock;  ///< Size of shared memory region (in bytes).
+  int regsPerBlock;          ///< Registers per block.
+  int warpSize;              ///< Warp size.
+  int maxThreadsPerBlock;    ///< Max work items per work group or workgroup max size.
+  int maxThreadsDim[3];      ///< Max number of threads in each dimension (XYZ) of a block.
+  int maxGridSize[3];        ///< Max grid dimensions (XYZ).
+  int clockRate;             ///< Max clock frequency of the multiProcessors in khz.
+  int memoryClockRate;       ///< Max global memory clock frequency in khz.
+  int memoryBusWidth;        ///< Global memory bus width in bits.
+  size_t totalConstMem;      ///< Size of shared memory region (in bytes).
+  int major;  ///< Major compute capability.  On HCC, this is an approximation and features may
+              ///< differ from CUDA CC.  See the arch feature flags for portable ways to query
+              ///< feature caps.
+  int minor;  ///< Minor compute capability.  On HCC, this is an approximation and features may
+              ///< differ from CUDA CC.  See the arch feature flags for portable ways to query
+              ///< feature caps.
+  int multiProcessorCount;          ///< Number of multi-processors. When the GPU works in Compute
+                                    ///< Unit (CU) mode, this value equals the number of CUs;
+                                    ///< when in Workgroup Processor (WGP) mode, this value equels
+                                    ///< half of CUs, because a single WGP contains two CUs.
+  int l2CacheSize;                  ///< L2 cache size.
+  int maxThreadsPerMultiProcessor;  ///< Maximum resident threads per multi-processor.
+  int computeMode;                  ///< Compute mode.
+  int clockInstructionRate;  ///< Frequency in khz of the timer used by the device-side "clock*"
+                             ///< instructions.  New for HIP.
+  hipDeviceArch_t arch;      ///< Architectural feature flags.  New for HIP.
+  int concurrentKernels;     ///< Device can possibly execute multiple kernels concurrently.
+  int pciDomainID;           ///< PCI Domain ID
+  int pciBusID;              ///< PCI Bus ID.
+  int pciDeviceID;           ///< PCI Device ID.
+  size_t maxSharedMemoryPerMultiProcessor;  ///< Maximum Shared Memory Per Multiprocessor.
+  int isMultiGpuBoard;                      ///< 1 if device is on a multi-GPU board, 0 if not.
+  int canMapHostMemory;                     ///< Check whether HIP can map host memory
+  int gcnArch;                              ///< DEPRECATED: use gcnArchName instead
+  char gcnArchName[256];                    ///< AMD GCN Arch Name.
+  int integrated;                           ///< APU vs dGPU
+  int cooperativeLaunch;                    ///< HIP device supports cooperative launch
+  int cooperativeMultiDeviceLaunch;         ///< HIP device supports cooperative launch on multiple
+                                            ///< devices
+  int maxTexture1DLinear;                   ///< Maximum size for 1D textures bound to linear memory
+  int maxTexture1D;                         ///< Maximum number of elements in 1D images
+  int maxTexture2D[2];  ///< Maximum dimensions (width, height) of 2D images, in image elements
+  int maxTexture3D[3];  ///< Maximum dimensions (width, height, depth) of 3D images, in image
+                        ///< elements
+  unsigned int* hdpMemFlushCntl;  ///< Addres of HDP_MEM_COHERENCY_FLUSH_CNTL register
+  unsigned int* hdpRegFlushCntl;  ///< Addres of HDP_REG_COHERENCY_FLUSH_CNTL register
+  size_t memPitch;                ///< Maximum pitch in bytes allowed by memory copies
+  size_t textureAlignment;        ///< Alignment requirement for textures
+  size_t texturePitchAlignment;   ///< Pitch alignment requirement for texture references bound to
+                                  ///< pitched memory
+  int kernelExecTimeoutEnabled;   ///< Run time limit for kernels executed on the device
+  int ECCEnabled;                 ///< Device has ECC support enabled
+  int tccDriver;                  ///< 1:If device is Tesla device using TCC driver, else 0
+  int cooperativeMultiDeviceUnmatchedFunc;       ///< HIP device supports cooperative launch on
+                                                 ///< multiple
+                                                 /// devices with unmatched functions
+  int cooperativeMultiDeviceUnmatchedGridDim;    ///< HIP device supports cooperative launch on
+                                                 ///< multiple
+                                                 /// devices with unmatched grid dimensions
+  int cooperativeMultiDeviceUnmatchedBlockDim;   ///< HIP device supports cooperative launch on
+                                                 ///< multiple
+                                                 /// devices with unmatched block dimensions
+  int cooperativeMultiDeviceUnmatchedSharedMem;  ///< HIP device supports cooperative launch on
+                                                 ///< multiple
+                                                 /// devices with unmatched shared memories
+  int isLargeBar;                                ///< 1: if it is a large PCI bar device, else 0
+  int asicRevision;                              ///< Revision of the GPU in this device
+  int managedMemory;                   ///< Device supports allocating managed memory on this system
+  int directManagedMemAccessFromHost;  ///< Host can directly access managed memory on the device
+                                       ///< without migration
+  int concurrentManagedAccess;  ///< Device can coherently access managed memory concurrently with
+                                ///< the CPU
+  int pageableMemoryAccess;     ///< Device supports coherently accessing pageable memory
+                                ///< without calling hipHostRegister on it
+  int pageableMemoryAccessUsesHostPageTables;  ///< Device accesses pageable memory via the host's
+                                               ///< page tables
+} hipDeviceProp_tR0000;
+#endif
+
+#if HIP_FORCE_API_VERSION < 600 && !defined(HIP_ABI_IMPL)
+// Legacy version, HIP_ABI_IMPL must not see this.
+typedef hipDeviceProp_tR0000 hipDeviceProp_t;
+#endif
+
+#if HIP_FORCE_API_VERSION >= 600
+// Latest version.
+
 /**
  * hipDeviceProp
  *
  */
-typedef struct hipDeviceProp_tR0600 {
+typedef struct hipDeviceProp_t {
   char name[256];                   ///< Device name.
   hipUUID uuid;                     ///< UUID of a device
   char luid[8];                     ///< 8-byte unique identifier. Only valid on windows
@@ -235,21 +333,10 @@ typedef struct hipDeviceProp_tR0600 {
                                                  /// devices with unmatched shared memories
   int isLargeBar;                                ///< 1: if it is a large PCI bar device, else 0
   int asicRevision;                              ///< Revision of the GPU in this device
-} hipDeviceProp_tR0600;
+} hipDeviceProp_t;
 
-/*
- Versioning struct. Because each public API must use the versioned struct to
- ensure ABI compatibility, we must typedef the actual struct name here.
-*/
-#if HIP_FORCE_API_VERSION < 600
-
-typedef struct hipDeviceProp_tR0000 hipDeviceProp_tR0000;
-typedef hipDeviceProp_tR0000 hipDeviceProp_t;
-
-#else
-
-typedef hipDeviceProp_tR0600 hipDeviceProp_t;
-
+// Latest version, HIP_ABI_IMPL should see this.
+typedef hipDeviceProp_t hipDeviceProp_tR0600;
 #endif
 
 /**
@@ -673,9 +760,8 @@ enum hipGPUDirectRDMAWritesOrdering {
 #include <hip/texture_types.h>
 #include <hip/surface_types.h>
 
-#if HIP_FORCE_API_VERSION == 0
-// If we need API version 0, it means nothing is deprecated. Application should
-// never do that, unless it needs to support all released version of HIP runtime.
+#if defined(HIP_ABI_IMPL)
+// Nothing is deprecated if we are implementing the HIP ABI.
 #define HIP_DEPRECATED(x)
 #elif defined(_MSC_VER)
 #define HIP_DEPRECATED(msg) __declspec(deprecated(msg))
@@ -2551,15 +2637,17 @@ hipError_t hipDeviceGetMemPool(hipMemPool_t* mem_pool, int device);
 // hipDeviceProp_t and hipGetDeviceProperties/hipChooseDevice are versioned.
 // See HIP_FORCE_API_VERSION in hip_common.h.
 
-hipError_t hipGetDevicePropertiesR0600(hipDeviceProp_tR0600* prop, int deviceId);
 
 
 // Deprecate since 600
-#if HIP_FORCE_API_VERSION < 600
+#if HIP_FORCE_API_VERSION < 600 || defined(HIP_ABI_IMPL)
 
 hipError_t hipGetDevicePropertiesR0000(hipDeviceProp_tR0000* prop, int deviceId);
 
-#else
+#endif
+
+#if HIP_FORCE_API_VERSION >= 600 || defined(HIP_ABI_IMPL)
+hipError_t hipGetDevicePropertiesR0600(hipDeviceProp_tR0600* prop, int deviceId);
 
 /**
  * @brief Returns device properties.
@@ -2721,14 +2809,15 @@ hipError_t hipDeviceSetSharedMemConfig(hipSharedMemConfig config);
  */
 hipError_t hipSetDeviceFlags(unsigned flags);
 
-hipError_t hipChooseDeviceR0600(int* device, const hipDeviceProp_tR0600* prop);
-
 // Deprecate since 600
-#if HIP_FORCE_API_VERSION < 600
+#if HIP_FORCE_API_VERSION < 600 || defined(HIP_ABI_IMPL)
 
 hipError_t hipChooseDeviceR0000(int* device, const hipDeviceProp_tR0000* prop);
 
-#else
+#endif
+
+#if HIP_FORCE_API_VERSION >= 600 || defined(HIP_ABI_IMPL)
+hipError_t hipChooseDeviceR0600(int* device, const hipDeviceProp_tR0600* prop);
 
 /**
  * @brief Device which matches hipDeviceProp_t is returned
@@ -4318,7 +4407,7 @@ hipError_t hipDrvMemDiscardAndPrefetchBatchAsync(hipDeviceptr_t* dptrs, size_t* 
                                                  unsigned long long flags, hipStream_t stream);
 
 // Deprecate since 800
-#if HIP_FORCE_API_VERSION < 800
+#if HIP_FORCE_API_VERSION < 800 || defined(HIP_ABI_IMPL)
 
 /**
  * @brief Advise about the usage of a given memory range to HIP.

@@ -125,6 +125,7 @@ target_sources(amdhip64 PRIVATE
   hip_api_trace.cpp
   hip_table_interface.cpp
   hip_table_interface_c.cpp
+  hip_deprecated_abi.c
   hip_comgr_helper.cpp
   hip_library.cpp
   profiler/hip_clr_profiler.cpp
@@ -174,6 +175,7 @@ target_include_directories(amdhip64
 
 target_compile_definitions(amdhip64 PRIVATE __HIP_PLATFORM_AMD__)
 
+target_compile_definitions(amdhip64 PRIVATE HIP_ABI_IMPL)
 target_link_libraries(amdhip64 PRIVATE ${OPENGL_LIBRARIES})
 target_link_libraries(amdhip64 PRIVATE ${CMAKE_DL_LIBS})
 # Add link to comgr, hsa-runtime and other required libraries in target files
