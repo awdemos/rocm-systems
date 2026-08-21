@@ -12,11 +12,6 @@ thresholds:
   # e.g. "A high stall rate (>= 10%) indicates..."
   stall_pct_high: 10.0       # >= 10% stall rate indicates bottleneck
   cache_hit_low: 50.0        # <= 50% hit rate indicates capacity issue
-  # Reserved for Phase B
-  traffic_ratio_high: 50.0   # > 50% traffic ratio indicates poor locality
-  utilization_high: 80.0     # > 80% utilization for compound BW-bound check
-  balance_read_dom: 80.0     # > 80% read fraction = read-dominant
-  balance_write_dom: 20.0    # < 20% read fraction = write-dominant
 
 nodes:
 
